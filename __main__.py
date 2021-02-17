@@ -1,36 +1,46 @@
 import os
-import string
+import re
 from contextlib import closing
 
 import pyttsx3
-
-
 from whoosh import index
-from whoosh.fields import SchemaClass, TEXT, KEYWORD, ID, STORED
-from whoosh.analysis import StemmingAnalyzer
+from whoosh.fields import SchemaClass, TEXT, ID
 
 from config import CORPUS_BASEDIR, WHOOSH_INDEX_BASEDIR, TTS_BASEDIR
 
+# TODO: strip white space and punctuation from body
+freenode_OnlineCop_re = re.compile(r"""
+^\s*
+(?P<leading_number>[0-9.]+|\([a-z0-9A-Z]+\))?
+\s*
+(?P<title>
+  (?:[^\d.;?\n]+
+  |
+  \d+(?:\.\d+)?
+  )* # Non-digits
+)
+(?P<punctuation>[.;?,]|$)(?P<body>.*?$)
+""", re.MULTILINE | re.VERBOSE)
+
 
 def readtxt(path):
-    # letters = set(string.ascii_letters)
-
     with closing(open(path, 'r', encoding='utf8')) as fh:
         for line in map(str.strip, iter(fh.readline, '')):
-            # if not letters.issubset(line):
-            #     continue
             if line == '________________':
                 continue
             yield line
+
 
 class TxtSchema(SchemaClass):
     path = ID(stored=True)
     title = TEXT(stored=True)
     content = TEXT
 
-def title_of(text):
-    title, *rest = text.split('.', maxsplit=1)
-    return title
+
+def slugify(s, maxlen=32):
+    # https://stackoverflow.com/questions/295135/turn-a-string-into-a-valid-filename
+    return "".join(x for x in s if x.isalnum())[:maxlen]
+
 
 if __name__ == '__main__':
     tts = pyttsx3.init()
@@ -44,8 +54,6 @@ if __name__ == '__main__':
         os.mkdir(WHOOSH_INDEX_BASEDIR)
     else:
         assert os.path.isdir(WHOOSH_INDEX_BASEDIR)
-
-    letters = set(string.ascii_letters)
 
     ix = index.create_in(WHOOSH_INDEX_BASEDIR, TxtSchema)
     writer = ix.writer()
@@ -68,9 +76,12 @@ if __name__ == '__main__':
         else:
             assert os.path.isdir(target_dir)
 
-        for n, line in enumerate(readtxt(path)):
-            tts.save_to_file(line, os.path.join(target_dir, '%i-%s.mp3' % (n, title_of(line))))
+        matches = re.finditer(freenode_OnlineCop_re, open(path, 'r', encoding='utf8').read())
+        for n, match in enumerate(matches, start=1):
+            prefix, title, punctuation, body = match.groups()
+            line = match.group(0)
+            print(n, prefix, title)
+            tts.save_to_file(line, os.path.join(target_dir, '%i-%s.mp3' % (n, slugify(title))))
             tts.runAndWait()
-            # tts.say(line)
     else:
         writer.commit()
