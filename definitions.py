@@ -1,3 +1,4 @@
+from collections import deque
 from itertools import cycle
 
 import bcolors
@@ -6,8 +7,6 @@ from PyDictionary import PyDictionary
 
 dictionary = PyDictionary()
 tts = pyttsx3.init()
-word = 'recursive'
-looked_up = set()  # TODO: FIFO?
 voices = cycle(tts.getProperty('voices'))
 unknown_words = set()
 
@@ -19,31 +18,29 @@ def print_and_say(text, print_prefix=None, print_suffix=None):
     tts.setProperty('voice', next(voices).id)
 
 
-def lookup(word, depth=0):
-    global looked_up
+def lookup(word):
     global unknown_words
 
     print_and_say(word, print_prefix=bcolors.UNDERLINE + bcolors.BOLD, print_suffix=bcolors.END)
 
     to_lookup = set()
-    looked_up.add(word)
 
     synonyms = dictionary.synonym(word)
     if synonyms is None:
         print_and_say(f"No synonyms known for {word}.")
     else:
-        print_and_say(f"The following {len(synonyms)} words are synonyms of {word}.")
+        print_and_say(f"Found {len(synonyms)}  synonyms for {word}.")
         for n, synonym in enumerate(synonyms):
-            print_and_say(f"{synonym}", print_prefix=f"\t{n}.\t", print_suffix=".")
+            print_and_say(f"\t{n+1}.\t {synonym}.")
             to_lookup.add(synonym)
 
     antonyms = dictionary.antonym(word)
     if antonyms is None:
         print_and_say(f"No antonyms known for {word}.")
     else:
-        print_and_say(f"The following {len(antonyms)} words are antonyms of {word}.")
+        print_and_say(f"Found {len(antonyms)}  antonyms for {word}.")
         for n, antonym in enumerate(antonyms):
-            print_and_say(f"{antonym}", print_prefix=f"\t{n}.\t", print_suffix=".")
+            print_and_say(f"\t{n+1}.\t {antonym}.")
             to_lookup.add(antonym)
 
     definition = dictionary.meaning(word)
@@ -56,20 +53,21 @@ def lookup(word, depth=0):
             for n, meaning in enumerate(meanings):
                 print_and_say(f"\t{n + 1}.\t{meaning}")
                 for related_word in meaning.split(" "):
-                    if related_word not in looked_up:
-                        to_lookup.add(related_word)
+                    to_lookup.add(related_word)
 
     while to_lookup:
-        print(f"{word} - {len(looked_up)} defined, {len(to_lookup)} pending.")
         try:
-            lookup(to_lookup.pop(), depth + 1)
+            yield to_lookup.pop()
         except IndexError:
-            break
+            continue
 
-try:
-    lookup(word)
-except:
-    pass
-finally:
-    print(unknown_words)
-    print(looked_up)
+
+if __name__ == '__main__':
+    pending = deque(['capitulate', 'whimsical'])
+
+    while pending:
+        word = pending.popleft()
+        for related_entry in lookup(word):
+            # TODO: prune stop words
+            pending.append(related_entry)
+
