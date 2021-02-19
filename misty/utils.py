@@ -4,17 +4,17 @@ from contextlib import closing
 from itertools import cycle
 
 from . import voices, tts
+
 voice_iter = cycle(voices)
 
-def print_and_say(text, print_prefix=None, print_suffix=None):
-    global tts
-    # global voices
-    # global voice_iter
+
+def print_and_say(text, print_prefix=None, print_suffix=None, next_voice=False):
+    if next_voice:
+        tts.setProperty('voice', next(voice_iter).id)
 
     print((print_prefix or '') + text + (print_suffix or ''))
     tts.say(text)
     tts.runAndWait()
-    # tts.setProperty('voice', next(voice_iter).id)
 
 
 def mkdir(path):
