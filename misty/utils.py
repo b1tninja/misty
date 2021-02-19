@@ -3,16 +3,23 @@ import string
 from contextlib import closing
 from itertools import cycle
 
-from . import voices, tts
+from . import voices, tts, voice_desc
 
 voice_iter = cycle(voices)
 
+def current_voice():
+    voice_id = tts.getProperty('voice')
+    return voices.get(voice_id)
+
+def current_speaker():
+    voice_id = tts.getProperty('voice')
+    return voice_desc.get(voice_id).get('name')
 
 def print_and_say(text, print_prefix=None, print_suffix=None, next_voice=False):
     if next_voice:
         tts.setProperty('voice', next(voice_iter).id)
 
-    print((print_prefix or '') + text + (print_suffix or ''))
+    print(f"{current_speaker():>12}:\t{print_prefix or ''}{text}{print_suffix or ''}")
     tts.say(text)
     tts.runAndWait()
 

@@ -91,7 +91,9 @@ if __name__ == '__main__':
             # Write Whoosh index
             indexer.commit()
 
+    ################################ QUERY ################################
     with ix.searcher() as searcher:
+        print_and_say("Please state your query.")
         query = input("query: ")
         parser = QueryParser("content", ix.schema).parse(query)
         results = searcher.search(parser)

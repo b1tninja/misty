@@ -5,17 +5,12 @@ import bcolors
 import pyttsx3
 from PyDictionary import PyDictionary
 
+from misty.utils import print_and_say
+
 dictionary = PyDictionary()
 tts = pyttsx3.init()
 voices = cycle(tts.getProperty('voices'))
 unknown_words = set()
-
-
-def print_and_say(text, print_prefix=None, print_suffix=None):
-    print((print_prefix or '') + text + (print_suffix or ''))
-    tts.say(text)
-    tts.runAndWait()
-    tts.setProperty('voice', next(voices).id)
 
 
 def lookup(word):
@@ -31,7 +26,7 @@ def lookup(word):
     else:
         print_and_say(f"Found {len(synonyms)}  synonyms for {word}.")
         for n, synonym in enumerate(synonyms):
-            print_and_say(f"\t{n+1}.\t {synonym}.")
+            print_and_say(f"\t{n + 1}.\t {synonym}.")
             to_lookup.add(synonym)
 
     antonyms = dictionary.antonym(word)
@@ -40,7 +35,7 @@ def lookup(word):
     else:
         print_and_say(f"Found {len(antonyms)}  antonyms for {word}.")
         for n, antonym in enumerate(antonyms):
-            print_and_say(f"\t{n+1}.\t {antonym}.")
+            print_and_say(f"\t{n + 1}.\t {antonym}.")
             to_lookup.add(antonym)
 
     definition = dictionary.meaning(word)
@@ -63,11 +58,15 @@ def lookup(word):
 
 
 if __name__ == '__main__':
-    pending = deque(['capitulate', 'whimsical'])
+    # pending = deque(['capitulate', 'whimsical'])
+    pending = deque(['axiomatic', 'disdain'])
 
     while pending:
-        word = pending.popleft()
-        for related_entry in lookup(word):
-            # TODO: prune stop words
-            pending.append(related_entry)
-
+        try:
+            word = pending.popleft()
+        except IndexError:
+            continue
+        else:
+            for related_entry in lookup(word):
+                # TODO: prune stop words
+                pending.append(related_entry)
