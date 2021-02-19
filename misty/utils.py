@@ -2,6 +2,8 @@ import os.path
 import string
 from contextlib import closing
 from itertools import cycle
+import bcolors
+
 
 from . import voices, tts, voice_desc
 
@@ -16,7 +18,7 @@ def current_speaker():
     return voice_desc.get(voice_id).get('name')
 
 def print_and_say(text, print_prefix=None, print_suffix=None, next_voice=True):
-    print(f"{current_speaker():>12}:\t{print_prefix or ''}{text}{print_suffix or ''}")
+    print(f"{bcolors.ITALIC}{current_speaker():>12}{bcolors.END}:\t{print_prefix or ''}{text}{print_suffix or ''}")
     tts.say(text)
 
     if next_voice:

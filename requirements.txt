@@ -4,3 +4,4 @@ PyDictionary==2.0.1
 yelpapi
 tqdm
 bcolors
+nltk

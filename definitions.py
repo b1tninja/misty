@@ -5,6 +5,7 @@ import bcolors
 import pyttsx3
 from PyDictionary import PyDictionary
 
+from misty import en_stopwords, logger
 from misty.utils import print_and_say
 
 dictionary = PyDictionary()
@@ -18,6 +19,7 @@ def lookup(word):
     yield from read_definitions(word)
     yield from read_synonyms(word)
     yield from read_antonyms(word)
+
 
 def read_synonyms(word):
     synonyms = dictionary.synonym(word)
@@ -40,6 +42,7 @@ def read_antonyms(word):
             print_and_say(f"\t{n + 1}.\t {antonym}.")
             yield antonym
 
+
 def read_definitions(word):
     definition = dictionary.meaning(word)
     if definition is None:
@@ -53,6 +56,7 @@ def read_definitions(word):
                 for related_word in meaning.split(" "):
                     yield related_word
 
+
 if __name__ == '__main__':
     # pending = deque(['capitulate', 'whimsical'])
     # pending = deque(['axiomatic', 'disdain'])
@@ -65,5 +69,7 @@ if __name__ == '__main__':
             continue
         else:
             for related_entry in lookup(word):
-                # TODO: prune stop words
-                pending.append(related_entry)
+                if related_entry not in en_stopwords:
+                    pending.append(related_entry)
+                else:
+                    logger.debug(f"Skipping {related_entry}...", print_prefix=bcolors.WARN, print_suffix=bcolors.END)
