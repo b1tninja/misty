@@ -5,7 +5,7 @@ from itertools import cycle
 
 from . import voices, tts, voice_desc
 
-voice_iter = cycle(voices)
+voice_iter = cycle(voices.keys())
 
 def current_voice():
     voice_id = tts.getProperty('voice')
@@ -15,12 +15,13 @@ def current_speaker():
     voice_id = tts.getProperty('voice')
     return voice_desc.get(voice_id).get('name')
 
-def print_and_say(text, print_prefix=None, print_suffix=None, next_voice=False):
-    if next_voice:
-        tts.setProperty('voice', next(voice_iter).id)
-
+def print_and_say(text, print_prefix=None, print_suffix=None, next_voice=True):
     print(f"{current_speaker():>12}:\t{print_prefix or ''}{text}{print_suffix or ''}")
     tts.say(text)
+
+    if next_voice:
+        tts.setProperty('voice', next(voice_iter))
+
     tts.runAndWait()
 
 

@@ -14,12 +14,12 @@ unknown_words = set()
 
 
 def lookup(word):
-    global unknown_words
-
     print_and_say(word, print_prefix=bcolors.UNDERLINE + bcolors.BOLD, print_suffix=bcolors.END)
+    yield from read_definitions(word)
+    yield from read_synonyms(word)
+    yield from read_antonyms(word)
 
-    to_lookup = set()
-
+def read_synonyms(word):
     synonyms = dictionary.synonym(word)
     if synonyms is None:
         print_and_say(f"No synonyms known for {word}.")
@@ -27,8 +27,10 @@ def lookup(word):
         print_and_say(f"Found {len(synonyms)}  synonyms for {word}.")
         for n, synonym in enumerate(synonyms):
             print_and_say(f"\t{n + 1}.\t {synonym}.")
-            to_lookup.add(synonym)
+            yield synonym
 
+
+def read_antonyms(word):
     antonyms = dictionary.antonym(word)
     if antonyms is None:
         print_and_say(f"No antonyms known for {word}.")
@@ -36,8 +38,9 @@ def lookup(word):
         print_and_say(f"Found {len(antonyms)}  antonyms for {word}.")
         for n, antonym in enumerate(antonyms):
             print_and_say(f"\t{n + 1}.\t {antonym}.")
-            to_lookup.add(antonym)
+            yield antonym
 
+def read_definitions(word):
     definition = dictionary.meaning(word)
     if definition is None:
         print_and_say(f"The definition for {word} is unknown.")
@@ -48,18 +51,12 @@ def lookup(word):
             for n, meaning in enumerate(meanings):
                 print_and_say(f"\t{n + 1}.\t{meaning}")
                 for related_word in meaning.split(" "):
-                    to_lookup.add(related_word)
-
-    while to_lookup:
-        try:
-            yield to_lookup.pop()
-        except IndexError:
-            continue
-
+                    yield related_word
 
 if __name__ == '__main__':
     # pending = deque(['capitulate', 'whimsical'])
-    pending = deque(['axiomatic', 'disdain'])
+    # pending = deque(['axiomatic', 'disdain'])
+    pending = deque(['attrition'])
 
     while pending:
         try:
