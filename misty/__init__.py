@@ -1,9 +1,8 @@
 import logging
 import re
 
-import pyttsx3
-
 import nltk
+import pyttsx3
 from nltk.corpus import stopwords
 
 nltk.download('stopwords')
