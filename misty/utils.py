@@ -1,5 +1,6 @@
 # TODO multiprocessing
 import os.path
+import random
 import string
 from collections import OrderedDict
 from contextlib import closing
@@ -7,13 +8,17 @@ from itertools import cycle
 
 import bcolors
 
-from . import voices, tts, voice_desc, logger
+from . import voices, tts, voice_desc, logger, en_stopwords
 
 # TODO googletrans
 # from googletrans import Translator
 # translator = Translator()
 
 voice_iter = cycle(voices.keys())
+
+
+def filter_stopwords(words):
+    return filter(lambda word: word not in en_stopwords, words)
 
 
 def current_voice():
@@ -24,6 +29,7 @@ def current_voice():
 def current_speaker():
     voice_id = tts.getProperty('voice')
     return voice_desc.get(voice_id).get('name')
+
 
 def print_and_say(text, print_prefix=None, print_suffix=None, next_voice=False):
     print(f"{bcolors.ITALIC}{current_speaker():>12}{bcolors.END}:\t{print_prefix or ''}{text}{print_suffix or ''}")
@@ -50,37 +56,32 @@ def slugify(s, maxlen=32):
     return "".join(x for x in s if x in filename_sane)[:maxlen]
 
 
-def read_lines(path):
-    with closing(open(path, 'r', encoding='utf8')) as fh:
-        for line in map(str.strip, iter(fh.readline, '')):
-            if line == '________________':
-                continue
-            yield line
+def read_lines(path, strip_empty_lines=True):
+    with closing(open(path, 'r', encoding='utf-8-sig')) as fh:
+        for line in iter(fh.readline, ''):
+            if line.strip():
+                yield line.rstrip()
 
 
 def get_sections(path):
     # _{16}\n*(^[A-z].*?$)\n
     # Iterate over lines, capturing prefixes and "titles".
-    txt_file = open(path, 'r', encoding='utf-8-sig')
     sections = OrderedDict()
     previous_line = page = None
-    for line in txt_file:
-        text = line.strip()
-        if not text:
-            continue
-        # TODO: cleanup with next()
-        if text == '________________':
-            page = None
-        else:
-            if page is None:
-                page = text
+    lines = iter(read_lines(path))
+    while True:
+        try:
+            line = next(lines)
+            # text = line.strip()
+            if line == '________________':
+                page = next(lines).strip()
                 continue
-            sections.setdefault(page, list()).append(text)
-            previous_line = text
+            else:
+                sections.setdefault(page, list()).append(line)
+        except StopIteration:
+            break
+
     return sections
-
-
-import random
 
 
 def query():
