@@ -33,7 +33,7 @@ class TxtSchema(SchemaClass):
     line = NUMERIC(stored=True)
 
 
-if __name__ == '__main__':
+def main():
     indexer = None
 
     mkdir(CORPUS_BASEDIR)
@@ -121,6 +121,8 @@ if __name__ == '__main__':
         q = query()
         if not q or q is True:
             continue
+        elif q.lower() in 'Qq':
+            break
 
         with ix.searcher() as searcher:
             parser = QueryParser("content", ix.schema).parse(q)
@@ -155,3 +157,7 @@ if __name__ == '__main__':
                                     print_and_say(f"\t\t\t{line}")
             else:
                 print_and_say(f"No hits for {q}.")
+
+
+if __name__ == '__main__':
+    main()
