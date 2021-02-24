@@ -74,7 +74,10 @@ def main():
 
                 elif section.lower() == 'TABLE OF CONTENTS':
                     continue
-                # print_and_say(f"{n}.\t{section}")
+
+                else:
+                    print_and_say(f"{n}.\t{section}")
+
                 for l, line in enumerate(lines):
                     indexer.add_document(path=path,
                                          document=document,
