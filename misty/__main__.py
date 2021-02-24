@@ -69,6 +69,11 @@ def main():
 
             print_and_say(f"Parsed {document} into {len(sections)} sections.")
             for n, (section, lines) in enumerate(sections.items(), start=1):
+                if section is None:
+                    section = document
+
+                elif section.lower() == 'TABLE OF CONTENTS':
+                    continue
                 # print_and_say(f"{n}.\t{section}")
                 for l, line in enumerate(lines):
                     indexer.add_document(path=path,
