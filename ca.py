@@ -1,3 +1,4 @@
+# 
 import base64
 import datetime
 import io
@@ -72,7 +73,7 @@ def get_dats_and_lobs(path, prefixes=None, txt=True):
     return dats, lobs
 
 
-def get_pubinfo(path):
+def get_pubinfo(path, **kwargs):
     assert os.path.isfile(path)
     json_path = path + '.json'
 
@@ -86,7 +87,7 @@ def get_pubinfo(path):
                 pubinfo = None
 
     if pubinfo is None:
-        dats, lobs = get_dats_and_lobs(path, prefixes=['LAW', 'CODE'])
+        dats, lobs = get_dats_and_lobs(path, **kwargs)
         pubinfo = dict(dats=dats, lobs=lobs)
 
         logging.info(f'Writting json version of dats and lobs found "{path}" to "{os.path.basename(json_path)}".')
@@ -102,7 +103,7 @@ def get_pubinfo(path):
     return pubinfo
 
 
-def get_pubinfos(basedir):
+def get_pubinfos(basedir, **kwargs):
     for basename in os.listdir(basedir):
         if not basename.endswith('.zip'):
             continue
@@ -112,7 +113,7 @@ def get_pubinfos(basedir):
         if not os.path.isfile(path):
             continue
 
-        pubinfo = get_pubinfo(path)
+        pubinfo = get_pubinfo(path, **kwargs)
         yield path, pubinfo
 
 
@@ -121,43 +122,36 @@ def get_pubinfos(basedir):
 #
 # @dedat
 def parse_dats(*, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECTIONS_TBL, **dats):
-    if not all([r + '.dat' in dats for r in locals()]):
-        logging.warning(f"Skipping {path}... missing required sections.")
-        return
+    codes_tbl = dict(CODES_TBL)
+
+    for row in LAW_TOC_TBL:
+        LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE, NODE_SEQUENCE, NODE_LEVEL, NODE_POSITION, NODE_TREEPATH, CONTAINS_LAW_SECTIONS, HISTORY_NOTE, OP_STATUES, OP_CHAPTER, OP_SECTION = row
+        print(HEADING)
+        # print(row)
+
+    for row in LAW_TOC_SECTIONS_TBL:
+        ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER, TITLE, OP_STATUES, OP_CHAPTER, OP_SECTION, TRANS_UID, TRANS_UPDATE, LAW_SECTION_VERSION_ID, SEQ_NUM = row
+        print(LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER)
+        # print(row)
+
+    codes = dict()
+    for row in LAW_SECTION_TBL:
+        ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE, LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE = row
+        if EFFECTIVE_DATE is not None:
+            EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
+
+        TEXT = lobs.get(LOB_FILE)
+
+        print(TEXT)
+
+        codes.setdefault(LAW_CODE, dict())
+        codes[LAW_CODE].setdefault(OP_SECTION, dict())
+        codes[LAW_CODE][OP_SECTION][ID] = TEXT
 
 
 if __name__ == '__main__':
-    for path, pubinfo in get_pubinfos(LEGINFO_BASEDIR):
-
+    for path, pubinfo in get_pubinfos(LEGINFO_BASEDIR, prefixes=['LAW', 'CODE']):
         dats = pubinfo['dats']
         lobs = pubinfo['lobs']
 
-        required = ['CODES_TBL', 'LAW_SECTION_TBL', 'LAW_TOC_SECTIONS_TBL']
         parse_dats(**dict([(os.path.splitext(k)[0], v) for k, v in dats.items()]))
-
-        codes_tbl = dict(dats['CODES_TBL.dat'])
-
-        for row in dats.get('LAW_TOC_TBL.dat', []):
-            LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE, NODE_SEQUENCE, NODE_LEVEL, NODE_POSITION, NODE_TREEPATH, CONTAINS_LAW_SECTIONS, HISTORY_NOTE, OP_STATUES, OP_CHAPTER, OP_SECTION = row
-            # print(HEADING)
-            print(row)
-
-        for row in dats.get('LAW_TOC_SECTIONS_TBL.dat', []):
-            ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER, TITLE, OP_STATUES, OP_CHAPTER, OP_SECTION, TRANS_UID, TRANS_UPDATE, LAW_SECTION_VERSION_ID, SEQ_NUM = row
-            # print(LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER)
-            print(row)
-
-        codes = dict()
-        for row in dats.get('LAW_SECTION_TBL.dat', []):
-            ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE, LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE = row
-            if EFFECTIVE_DATE is not None:
-                EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
-
-            print(row)
-
-            TEXT = lobs.get(LOB_FILE)
-            print(TEXT)
-
-            codes.setdefault(LAW_CODE, dict())
-            codes[LAW_CODE].setdefault(OP_SECTION, dict())
-            codes[LAW_CODE][OP_SECTION][ID] = TEXT
