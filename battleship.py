@@ -4,6 +4,7 @@
 # PRESERVE THE BITS (POPULATION) AND SHUFFLE ON EXAMINATION? [4th dimmension]
 # 5th dimmension hides the state of the 4th
 # TODO: HAMMING CODES (jk)
+# TDIL, well, yesterday, of Jan Amb
 
 class Grid:
     # GRID N**D grid, S(eed)
