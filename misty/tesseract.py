@@ -8,6 +8,12 @@ from config import CORPUS_BASEDIR, TESSERACT_BIN
 from misty.utils import print_and_say
 
 
+# windows?
+# tesseract https://github.com/UB-Mannheim/tesseract/wiki
+# poppler https://blog.alivate.com.au/poppler-windows/
+# copy some place, modify system to include bin folder in PATH
+# TODO: configure location for poppler
+
 def ocr(basedir):
     if not os.path.isfile(TESSERACT_BIN):
         logging.critical("You must install tesseract for OCR.")
