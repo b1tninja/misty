@@ -117,10 +117,10 @@ def get_pubinfos(basedir, **kwargs):
         yield path, pubinfo
 
 
-# def dedat(func, *args, **kwargs):
-#     return func(*args, **dict([(os.path.splitext(k)[0], v) for k, v in kwargs.items()])
-#
-# @dedat
+dxt = lambda func: lambda *args, **kwargs: func(*args, **dict([(os.path.splitext(k)[0], v) for k, v in kwargs.items()]))
+
+
+@dxt
 def parse_dats(*, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECTIONS_TBL, **dats):
     codes_tbl = dict(CODES_TBL)
 
@@ -154,4 +154,4 @@ if __name__ == '__main__':
         dats = pubinfo['dats']
         lobs = pubinfo['lobs']
 
-        parse_dats(**dict([(os.path.splitext(k)[0], v) for k, v in dats.items()]))
+        parse_dats(**dats)
