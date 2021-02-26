@@ -1,5 +1,3 @@
-# 
-import base64
 import datetime
 import io
 import json
@@ -43,7 +41,9 @@ def read_rows_from_zipped(zip_file, target):
                     col for col in row)
 
 
-def get_dats_and_lobs(path, prefixes=None, txt=True):
+def get_dats_and_lobs(path, prefixes=None, txt=True, width=0):
+    """gotta get dats... and lobs"""
+    # https://youtu.be/IC9nuBmeX-A
     basename = os.path.basename(path)
     dats = dict()
     lobs = dict()
@@ -61,19 +61,20 @@ def get_dats_and_lobs(path, prefixes=None, txt=True):
 
             elif ext == '.lob':
                 if txt:
-                    html2txt = html2text.HTML2Text(bodywidth=0)
+                    # Information is power. But like all power, there are those who want to keep it for themselves.
+                    html2txt = html2text.HTML2Text(bodywidth=width)
                     html = read_text_from_zipped_file(zf, file.filename)
                     TEXT = html2txt.handle(html)
                     lobs[file.filename] = TEXT
                 else:
-                    lobs[file.filename] = base64.b64encode(zf.read(file.filename))
+                    lobs[file.filename] = zf.read(file.filename)
             else:
                 logging.debug(f"Unhandled content: {file.filename}")
 
     return dats, lobs
 
 
-def get_pubinfo(path, **kwargs):
+def unzip_dats_and_lobs(path, **kwargs):
     assert os.path.isfile(path)
     json_path = path + '.json'
 
@@ -100,10 +101,10 @@ def get_pubinfo(path, **kwargs):
             except Exception as e:
                 logging.critical("Unable to write pubinfo JSON to disk", e)
 
-    return pubinfo
+    return pubinfo.get('dats', []), pubinfo.get('lobs', [])
 
 
-def get_pubinfos(basedir, **kwargs):
+def get_datses_and_lobses(basedir, **kwargs):
     for basename in os.listdir(basedir):
         if not basename.endswith('.zip'):
             continue
@@ -113,45 +114,65 @@ def get_pubinfos(basedir, **kwargs):
         if not os.path.isfile(path):
             continue
 
-        pubinfo = get_pubinfo(path, **kwargs)
-        yield path, pubinfo
+        dats, lobs = unzip_dats_and_lobs(path, **kwargs)
+        yield path, (dats, lobs)
 
 
-dxt = lambda func: lambda *args, **kwargs: func(*args, **dict([(os.path.splitext(k)[0], v) for k, v in kwargs.items()]))
+def dxt(func):
+    return lambda *args, **kwargs: func(*args, **dict([(os.path.splitext(k)[0], v) for k, v in kwargs.items()]))
+
+
+def starg(func):
+    return lambda args: func(*args)
+
+
+@starg
+def LawTocTblDict(LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE,
+                  NODE_SEQUENCE, NODE_LEVEL, NODE_POSITION, NODE_TREEPATH, CONTAINS_LAW_SECTIONS, HISTORY_NOTE,
+                  OP_STATUES, OP_CHAPTER, OP_SECTION):
+    return dict(**locals())
+
+
+@starg
+def LawTocSectionsTblDict(ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER, TITLE, OP_STATUES, OP_CHAPTER,
+                          OP_SECTION, TRANS_UID, TRANS_UPDATE, LAW_SECTION_VERSION_ID, SEQ_NUM):
+    return dict(**locals())
+
+
+@starg
+def LawSectionTblDict(ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE,
+                      LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG,
+                      TRANS_UID, TRANS_UPDATE):
+    EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
+    TRANS_UPDATE = datetime.datetime.fromisoformat(TRANS_UPDATE)
+    return dict(**locals())
 
 
 @dxt
-def parse_dats(*, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECTIONS_TBL, **dats):
-    codes_tbl = dict(CODES_TBL)
-
-    for row in LAW_TOC_TBL:
-        LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE, NODE_SEQUENCE, NODE_LEVEL, NODE_POSITION, NODE_TREEPATH, CONTAINS_LAW_SECTIONS, HISTORY_NOTE, OP_STATUES, OP_CHAPTER, OP_SECTION = row
-        print(HEADING)
-        # print(row)
-
-    for row in LAW_TOC_SECTIONS_TBL:
-        ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER, TITLE, OP_STATUES, OP_CHAPTER, OP_SECTION, TRANS_UID, TRANS_UPDATE, LAW_SECTION_VERSION_ID, SEQ_NUM = row
-        print(LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER)
-        # print(row)
+def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECTIONS_TBL):
+    # CODES_TBL = OrderedDict(CODES_TBL)
+    #
+    # for d in map(LawTocTblDict, LAW_TOC_TBL):
+    #     print(d)
+    #
+    # for d in map(LawTocSectionsTblDict, LAW_TOC_SECTIONS_TBL):
+    #     print(d)
 
     codes = dict()
-    for row in LAW_SECTION_TBL:
-        ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE, LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE = row
-        if EFFECTIVE_DATE is not None:
-            EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
-
-        TEXT = lobs.get(LOB_FILE)
-
-        print(TEXT)
-
+    for ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE, LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE in LAW_SECTION_TBL:
+        LOB = LOBS.get(LOB_FILE)
         codes.setdefault(LAW_CODE, dict())
         codes[LAW_CODE].setdefault(OP_SECTION, dict())
-        codes[LAW_CODE][OP_SECTION][ID] = TEXT
+        codes[LAW_CODE][OP_SECTION][ID] = LOB
+
+    return codes
 
 
 if __name__ == '__main__':
-    for path, pubinfo in get_pubinfos(LEGINFO_BASEDIR, prefixes=['LAW', 'CODE']):
-        dats = pubinfo['dats']
-        lobs = pubinfo['lobs']
 
-        parse_dats(**dats)
+    for path, (dats, lobs) in get_datses_and_lobses(LEGINFO_BASEDIR, prefixes=['LAW', 'CODE']):
+        try:
+            codes = parse_datlobs(lobs, **dats)
+            print(codes)
+        except TypeError as e:
+            logging.warning(f"Skipping {path}... {e}.")
