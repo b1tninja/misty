@@ -1,15 +1,15 @@
 import base64
 import logging
 import os
-import re
+from contextlib import closing
 from io import BytesIO
 
 import pdf2image
 import pytesseract
+import tqdm
 
 from config import CORPUS_BASEDIR, TESSERACT_BIN
-from misty.__main__ import freenode_OnlineCop_re
-from misty.utils import print_and_say
+from misty.utils import mkdir
 
 
 # windows?
@@ -25,8 +25,10 @@ def pil_to_b64(image):
 
 
 def ocrpdf(path):
-    images = pdf2image.convert_from_path(path)
-    for image in images:
+    logging.info(f"Extracting page images from {path}")
+    images = list(pdf2image.convert_from_path(path))
+    logging.info("Using neural network to recognize text")
+    for image in tqdm.tqdm(images):
         pytesseract.pytesseract.tesseract_cmd = TESSERACT_BIN
         text = pytesseract.image_to_string(image)
         yield image, text.strip()
@@ -45,28 +47,22 @@ def ocrdir(basedir):
         name, ext = os.path.splitext(basename)
         ext = ext.lower()
         if ext == '.pdf':
+            pdfoutdir = os.path.join(basedir, name)
+            if not mkdir(pdfoutdir):
+                continue
+
             for n, (image, text) in enumerate(ocrpdf(path)):
-                image_path = os.path.join(basedir, f"{name}-{n}.jpg")
+                image_path = os.path.join(pdfoutdir, f"{n}.jpg")
+
                 if os.path.exists(image_path):
                     continue
+                else:
+                    image.save(image_path, 'JPEG')
 
-                image.save(image_path, 'JPEG')
-
-                print(text)
-
-                matches = re.finditer(freenode_OnlineCop_re, text)
-                for n, match in enumerate(matches, start=1):
-                    prefix, title, punctuation, body = match.groups()
-                    line = match.group(0)
-                    logging.debug(n, prefix, title)
-                    print_and_say(title)
-                    # wav_out = os.path.join(sec_dir, f'{n}-{slugify(title)}.wav')
-                    # if not os.path.exists(wav_out):
-                    #     tts.save_to_file(line, wav_out)
-                    #     tts.runAndWait()
-
-                # image.show()
-
+                txt_path = os.path.join(pdfoutdir, f"{n}.txt")
+                if not os.path.exists(txt_path):
+                    with closing(open(txt_path, 'w', encoding='utf-8')) as fh:
+                        fh.write(text)
 
 if __name__ == '__main__':
     ocrdir(CORPUS_BASEDIR)
