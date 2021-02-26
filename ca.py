@@ -1,9 +1,12 @@
 import datetime
 import io
 import json
+import logging
 import os
 import zipfile
+from contextlib import closing
 
+import html2text
 import tqdm
 
 LEGINFO_BASEDIR = r"D:\downloads.leginfo.legislature.ca.gov"
@@ -37,12 +40,32 @@ def read_rows_from_zipped(zip_file, target):
                     col for col in row)
 
 
-import html2text
-
-for basename in os.listdir(LEGINFO_BASEDIR):
+def get_dats_and_lobs(path, prefixes=None, txt=True):
+    print(f"Extracting {os.path.basename(path)}...")
     dats = dict()
     lobs = dict()
 
+    with zipfile.ZipFile(path) as zf:
+        for file in tqdm.tqdm(zf.filelist):
+            if type(prefixes) is list and not any([file.filename.startswith(p) for p in prefixes]):
+                continue
+
+            if file.filename.endswith('.dat'):
+                dats[file.filename] = list(read_rows_from_zipped(zf, file))
+
+            elif file.filename.endswith('.lob'):
+                if txt:
+                    html2txt = html2text.HTML2Text(bodywidth=0)
+                    html = read_text_from_zipped_file(zf, file.filename)
+                    TEXT = html2txt.handle(html)
+                    lobs[file.filename] = TEXT
+                else:
+                    lobs[file.filename] = zf.read(file.filename)
+
+    return dats, lobs
+
+
+for basename in os.listdir(LEGINFO_BASEDIR):
     if not basename.endswith('.zip'):
         continue
 
@@ -50,28 +73,36 @@ for basename in os.listdir(LEGINFO_BASEDIR):
     if not os.path.isfile(path):
         continue
 
-    print(f"Extracting {os.path.basename(path)}...")
-    with zipfile.ZipFile(path) as zf:
-        for file in tqdm.tqdm(zf.filelist):
-            if not any([file.filename.startswith(p) for p in ['LAW', 'CODE']]):
-                continue
+    json_path = path + '.json'
 
-            if file.filename.endswith('.dat'):
-                dats[file.filename] = list(read_rows_from_zipped(zf, file))
+    if os.path.exists(json_path):
+        assert os.path.isfile(json_path)
+        with closing(open(json_path, 'r')) as fh:
+            pubinfo = json.load(fh)
+            dats = pubinfo['dats']
+            lobs = pubinfo['lobs']
+    else:
+        dats, lobs = get_dats_and_lobs(path, prefixes=['LAW', 'CODE'])
+        logging.info(f'Writting json version of dats and lobs found "{path}" to "{os.path.basename(json_path)}".')
+        with closing(open(json_path, 'w')) as fh:
+            pubinfo = dict(dats=dats, lobs=lobs)
+            json.dump(pubinfo, fh)
 
-            elif file.filename.endswith('.lob'):
-                html2txt = html2text.HTML2Text(bodywidth=0)
-                html = read_text_from_zipped_file(zf, file.filename)
-                TEXT = html2txt.handle(html)
-                lobs[file.filename] = TEXT
+    # codes_tbl = dict([(CODE, TITLE) for (CODE, TITLE) in dats['CODES_TBL.dat']])
+    required = ['CODES_TBL', 'LAW_SECTION_TBL', 'LAW_TOC_SECTIONS_TBL']
+    if any([r + '.dat' not in dats for r in required]):
+        logging.warn(f"Skipping {path}... missing required sections.")
+        continue
+
+    codes_tbl = dict(dats['CODES_TBL.dat'])
 
     for row in dats.get('LAW_TOC_TBL.dat', []):
         LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE, NODE_SEQUENCE, NODE_LEVEL, NODE_POSITION, NODE_TREEPATH, CONTAINS_LAW_SECTIONS, HISTORY_NOTE, OP_STATUES, OP_CHAPTER, OP_SECTION = row
-        # print(row)
+        print(row)
 
     for row in dats.get('LAW_TOC_SECTIONS_TBL.dat', []):
         ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER, TITLE, OP_STATUES, OP_CHAPTER, OP_SECTION, TRANS_UID, TRANS_UPDATE, LAW_SECTION_VERSION_ID, SEQ_NUM = row
-        # print(TITLE)
+        print(TITLE)
 
     codes = dict()
     for row in dats.get('LAW_SECTION_TBL.dat', []):
@@ -85,7 +116,3 @@ for basename in os.listdir(LEGINFO_BASEDIR):
         codes[LAW_CODE].setdefault(OP_SECTION, dict())
         codes[LAW_CODE][OP_SECTION][ID] = TEXT
 
-    else:
-
-        with open(os.path.join(LEGINFO_BASEDIR, basename + '.json'), 'w') as fh:
-            json.dump(codes, fh)
