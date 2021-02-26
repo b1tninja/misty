@@ -27,7 +27,7 @@ def pil_to_b64(image):
 def ocrpdf(path):
     logging.info(f"Extracting page images from {path}")
     images = list(pdf2image.convert_from_path(path))
-    logging.info("Using neural network to recognize text")
+    logging.info("Using neural network to identify lines and convert graphemes into text.")
     for image in tqdm.tqdm(images):
         pytesseract.pytesseract.tesseract_cmd = TESSERACT_BIN
         text = pytesseract.image_to_string(image)
