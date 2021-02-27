@@ -4,7 +4,6 @@ import os
 from contextlib import closing
 from io import BytesIO
 
-import pdf2image
 import pytesseract
 import tqdm
 
@@ -18,12 +17,18 @@ def pil_to_b64(image):
     return base64.b64encode(buffered.getvalue())
 
 
+def image_to_text(image):
+    pytesseract.pytesseract.tesseract_cmd = TESSERACT_BIN
+    text = pytesseract.image_to_string(image)
+    return text
+
+
 def ocrpdf(path):
+    return
     logging.info(f"Extracting page images from {path}")
     logging.info("Using neural network to identify lines, and convert graphemes into text.")
     for image in tqdm.tqdm(pdf2image.convert_from_path(path)):
-        pytesseract.pytesseract.tesseract_cmd = TESSERACT_BIN
-        text = pytesseract.image_to_string(image)
+        image_to_text(image)
         yield image, text.strip()
 
 
@@ -61,3 +66,9 @@ def ocrdir(basedir):
 
 if __name__ == '__main__':
     ocrdir(CORPUS_BASEDIR)
+
+
+def pdf_page_image(path, page):
+    raise NotImplementedError()
+    import pdf2image
+    return list(pdf2image.convert_from_path(path))

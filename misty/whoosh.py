@@ -2,13 +2,14 @@ import logging
 import os.path
 from enum import Enum, auto
 
+from PIL import Image
 from whoosh import highlight, index
 from whoosh.fields import SchemaClass, ID, TEXT, NUMERIC, KEYWORD
 from whoosh.qparser import QueryParser
 
 from .config import WHOOSH_INDEX_BASEDIR
-from .tesseract import ocrpdf
-from .utils import mkdir, parse_document, for_file_path_name_by_ext, save_txt
+from .tesseract import ocrpdf, image_to_text, pdf_page_image
+from .utils import mkdir, parse_document, for_file_path_name_by_ext, save_txt, read_lines
 
 logger = logging.getLogger(os.path.basename(__file__))
 
@@ -65,14 +66,31 @@ class Indexer:
         name, ext = os.path.splitext(file_name)
 
         out_dir = os.path.join(os.path.dirname(path), name)
-        mkdir(out_dir)
-        image_texts = list(ocrpdf(path))
-        for page_num, (image, text) in enumerate(image_texts):
-            img_path = os.path.join(out_dir, f"{page_num}.jpg")
-            image.save(img_path)
+        if mkdir(out_dir):
+            # process_pdf(path)
+            image_texts = list(ocrpdf(path))
+            for page_num, (image, text) in enumerate(image_texts):
+                img_path = os.path.join(out_dir, f"p{page_num:03}.jpg")
+                image.save(img_path)
 
-            txt_path = os.path.join(out_dir, f"{page_num}.txt")
-            save_txt(txt_path, text)
+                txt_path = os.path.join(out_dir, f"p{page_num:03}.txt")
+                if not os.path.exists(txt_path):
+                    save_txt(txt_path, text)
+        else:
+            assert os.path.isdir(out_dir)
+            files = dict(txt={}, jpg={})
+            for path, name, file_name, file_ext in for_file_path_name_by_ext(out_dir, list(files.keys())):
+                if file_ext == 'txt':
+                    obj = list(read_lines(path))
+                elif file_ext == 'jpg':
+                    obj = Image.open(path)
+
+                files[file_ext][name] = obj
+
+            c = max(len(files[ext]) for ext in files.keys())
+            image_texts = [(files['jpg'].get(f"p{i:03}.jpg") or pdf_page_image(path, i),
+                            files['txt'].get(f"p{i:03}.txt") or image_to_text(
+                                files['jpg'].get(f"p{i:03}.jpg") or pdf_page_image(path, i))) for i in range(c)]
 
         document = dict(path=path,
                         name=name,
@@ -111,6 +129,7 @@ class Indexer:
             for n, (section, lines) in enumerate(document['sections'].items(), start=1):
                 if section is None:
                     section = document['name']
+
                 # else:
                 #     print_and_say(section, print_prefix=f"{n}.\t")
 
@@ -124,7 +143,7 @@ class Indexer:
     def index_law_section(self, law_section):
         pass
 
-    def search(self, q, result_cb):
+    def search(self, q, callback):
         idx = index.open_dir(self.txt_idx_path)
         with idx.searcher() as searcher:
             parser = QueryParser("content", idx.schema).parse(q)
@@ -132,7 +151,7 @@ class Indexer:
             # results.fragmenter = highlight.PinpointFragmenter(surround=64, autotrim=True)
             results.fragmenter = highlight.ContextFragmenter(surround=128)
             results.formatter = highlight.UppercaseFormatter()
-            result_cb(results)
+            callback(results)
 
     def index_codes(self, *args, **kwargs):
         pass

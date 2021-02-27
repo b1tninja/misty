@@ -92,6 +92,7 @@ def get_sections(path, skip=None):
 
 def query():
     speaker = current_speaker()
+    # TODO: change to format
     prompts = ['What shall I search for?',
                'Your command is my wish.',
                'State your query.',
