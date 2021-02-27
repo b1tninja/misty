@@ -210,9 +210,13 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
         # o.writelines([])
         _toc = toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]
         print(f"{bcolors.BLUE}{CODES_TBL[LAW_CODE]}{bcolors.ENDC}")
+        print(f"    {toc_tbl[LAW_CODE][DIVISION][None][None]['HEADING']}")
+        print(f"        {toc_tbl[LAW_CODE][DIVISION][CHAPTER][None]['HEADING']}")
+        print("")
         print(
-            f"    {bcolors.UNDERLINE}{_toc['HEADING']}{bcolors.ENDC} ({bcolors.ITALIC}{_toc['HISTORY_NOTE']}{bcolors.ENDC})")
+            f"{bcolors.UNDERLINE}{_toc['HEADING']}{bcolors.ENDC} ({bcolors.ITALIC}{_toc['HISTORY_NOTE']}{bcolors.ENDC})")
         print(f"        SOMETHING AND THE REST IS ({HISTORY})")
+        print("")
         print(f"{bcolors.BOLD}{code_section_titles[LAW_CODE][SECTION_NUM]['TITLE'] or ''}{bcolors.ENDC}")
         print(LOB)
 
