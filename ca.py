@@ -3,19 +3,27 @@ import io
 import json
 import logging
 import os
+import os.path
+import pprint
 import zipfile
 from contextlib import closing
+from typing import Optional
 
 import bcolors
 import html2text
 import tqdm
 
+logger = logging.getLogger(os.path.basename(__file__))
+
+# TODO: downloader
+# wget --mirror https://downloads.leginfo.legislature.ca.gov/
 LEGINFO_BASEDIR = r"D:\downloads.leginfo.legislature.ca.gov"
 ENCODING = 'utf-8'
 CURRENT_YEAR = datetime.datetime.today().year
 
 
-# wget --mirror https://downloads.leginfo.legislature.ca.gov/
+class LawLibrary:
+    pass
 
 
 def read_text_from_zipped_file(zip_file, target):
@@ -55,7 +63,7 @@ def get_dats_and_lobs(path, prefixes=None, txt=True, width=0):
         for file in tqdm.tqdm(zf.filelist):
             name, ext = os.path.splitext(file.filename)
             if type(prefixes) is list and not any([file.filename.startswith(p) for p in prefixes]):
-                logging.debug(f"Skipping {file.filename}...")
+                logger.debug(f"Skipping {file.filename}...")
                 continue
 
             if ext == '.dat':
@@ -71,7 +79,7 @@ def get_dats_and_lobs(path, prefixes=None, txt=True, width=0):
                 else:
                     lobs[file.filename] = zf.read(file.filename)
             else:
-                logging.debug(f"Unhandled content: {file.filename}")
+                logger.debug(f"Unhandled content: {file.filename}")
 
     return dats, lobs
 
@@ -93,15 +101,15 @@ def unzip_dats_and_lobs(path, **kwargs):
         dats, lobs = get_dats_and_lobs(path, **kwargs)
         pubinfo = dict(dats=dats, lobs=lobs)
 
-        logging.info(f'Writting json version of dats and lobs found "{path}" to "{os.path.basename(json_path)}".')
+        logger.info(f'Writting json version of dats and lobs found "{path}" to "{os.path.basename(json_path)}".')
 
         with closing(open(json_path, 'w', encoding=ENCODING)) as fh:
             try:
-                json.dump(pubinfo, fh)  # ensure_ascii=True
+                json.dump(pubinfo, fh, ensure_ascii=False)  # ensure_ascii=True
             except UnicodeEncodeError as e:
-                logging.warning("Not Plain-Text:", e)
+                logger.warning("Not Plain-Text:", e)
             except Exception as e:
-                logging.critical("Unable to write pubinfo JSON to disk", e)
+                logger.critical("Unable to write pubinfo JSON to disk", e)
 
     return pubinfo.get('dats', []), pubinfo.get('lobs', [])
 
@@ -173,10 +181,12 @@ def LawTocSectionsTblDict(ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDE
 
 
 @starg
-def LawSectionTblDict(ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE,
+def LawSectionTblDict(ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE: Optional[str],
                       LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG,
                       TRANS_UID, TRANS_UPDATE):
-    EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
+    if EFFECTIVE_DATE is not None:
+        EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
+
     TRANS_UPDATE = datetime.datetime.fromisoformat(TRANS_UPDATE)
     return dict(**locals())
 
@@ -193,40 +203,70 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
                                           {}).setdefault(d['CHAPTER'],
                                                          {}).__setitem__(d['ARTICLE'], d)
 
-    # toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]
     code_section_titles = dict()
     for d in map(LawTocSectionsTblDict, LAW_TOC_SECTIONS_TBL):
         code_section_titles.setdefault(d['LAW_CODE'],
                                        {}).__setitem__(d['SECTION_NUM'], d)
 
     codes = dict()
-    for ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE, LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE in LAW_SECTION_TBL:
+    for law_section in LAW_SECTION_TBL:
+        ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE, LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE = law_section
         LOB = LOBS.get(LOB_FILE)
         codes.setdefault(LAW_CODE, dict())
         codes[LAW_CODE].setdefault(OP_SECTION, dict())
         codes[LAW_CODE][OP_SECTION][ID] = LOB
 
-        # o = io.StringIO()
-        # o.writelines([])
-        _toc = toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]
-        print(f"{bcolors.BLUE}{CODES_TBL[LAW_CODE]}{bcolors.ENDC}")
-        print(f"    {toc_tbl[LAW_CODE][DIVISION][None][None]['HEADING']}")
-        print(f"        {toc_tbl[LAW_CODE][DIVISION][CHAPTER][None]['HEADING']}")
-        print("")
-        print(
-            f"{bcolors.UNDERLINE}{_toc['HEADING']}{bcolors.ENDC} ({bcolors.ITALIC}{_toc['HISTORY_NOTE']}{bcolors.ENDC})")
-        print(f"        SOMETHING AND THE REST IS ({HISTORY})")
-        print("")
-        print(f"{bcolors.BOLD}{code_section_titles[LAW_CODE][SECTION_NUM]['TITLE'] or ''}{bcolors.ENDC}")
-        print(LOB)
+        try:
+            d = LawSectionTblDict(law_section)
+            d.update(CODE=LAW_CODE,
+                     CODE_HEADING=CODES_TBL[LAW_CODE],
+                     DIVISION_HEADING=toc_tbl[LAW_CODE][DIVISION][None][None]['HEADING'],
+                     CHAPTER_HEADING=toc_tbl[LAW_CODE][DIVISION][CHAPTER][None]['HEADING'],
+                     ARTICLE_HEADING=toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]['HEADING'],
+                     ARTICLE_HISTORY=toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]['HISTORY_NOTE'],
+                     LEGAL_TEXT=LOB,
+                     SECTION_TITLE=code_section_titles[LAW_CODE].get(SECTION_NUM, {}).get('TITLE'),
+                     SECTION_NUM=SECTION_NUM,
+                     SECTION_HISTORY=HISTORY)
 
-    return codes
+        except:
+            logging.warning("Unexpected table structure, unsure how to format LawSe")
+            pprint.pprint(LawSectionTblDict(law_section))
 
+        else:
+            yield d
+
+
+law_fmt = """
+{CODE_HEADING}
+    {DIVISION_HEADING}
+        {CHAPTER_HEADING}
+{ARTICLE_HEADING} ( {ARTICLE_HISTORY} )
+
+{SECTION_TITLE}
+{LEGAL_TEXT}
+{SECTION_HISTORY}
+"""
+
+color_law_fmt = f"""
+{bcolors.BLUE}{{CODE_HEADING}}{bcolors.ENDC}
+    {{DIVISION_HEADING}}
+        {{CHAPTER_HEADING}}
+
+{bcolors.UNDERLINE}{{ARTICLE_HEADING}}{bcolors.ENDC} ( {bcolors.ITALIC}{{ARTICLE_HISTORY}}{bcolors.ENDC} )
+
+{bcolors.BOLD}{{SECTION_TITLE}}{bcolors.ENDC}
+{{LEGAL_TEXT}}
+{bcolors.ITALIC}{{SECTION_HISTORY}}{bcolors.ENDC}
+"""
 
 if __name__ == '__main__':
-
     for path, (dats, lobs) in get_datses_and_lobses(LEGINFO_BASEDIR, prefixes=['LAW', 'CODE']):
-        # try:
-        codes = parse_datlobs(lobs, **dats)
-    # except TypeError as e:
-    #     logging.warning(f"Skipping {path}... {e}.")
+        try:
+            color = False
+            for law in parse_datlobs(lobs, **dats):
+                pass
+                # print((color_law_fmt if color else law_fmt).format(**law))
+
+        except TypeError as e:
+            logger.warning(f"Skipping {path}... {e}.")
