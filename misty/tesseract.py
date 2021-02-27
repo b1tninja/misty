@@ -45,6 +45,7 @@ def ocrdir(basedir):
             if not mkdir(pdfoutdir):
                 continue
 
+            # TODO: multiprocessing tqdm, or some way to read the pagination as a first step
             for n, (image, text) in enumerate(ocrpdf(path)):
                 image_path = os.path.join(pdfoutdir, f"{n}.jpg")
 

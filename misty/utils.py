@@ -1,4 +1,5 @@
 # TODO multiprocessing
+import os
 import os.path
 import random
 import string
@@ -63,12 +64,13 @@ def read_lines(path, strip_empty_lines=True):
                 yield line.rstrip()
 
 
-def get_sections(path):
-    # _{16}\n*(^[A-z].*?$)\n
-    # Iterate over lines, capturing prefixes and "titles".
+def get_sections(path, skip=None):
+    assert type(skip) in [list, str]
+
     sections = OrderedDict()
-    previous_line = page = None
+    page = os.path.splitext(os.path.basename(path))[0]
     lines = iter(read_lines(path))
+
     while True:
         try:
             line = next(lines)
@@ -77,6 +79,10 @@ def get_sections(path):
                 page = next(lines).strip()
                 continue
             else:
+                if type(skip) is list and page in skip:
+                    continue
+                elif type(skip) is str and page == skip:
+                    continue
                 sections.setdefault(page, list()).append(line)
         except StopIteration:
             break
@@ -123,3 +129,11 @@ def query():
             return True
 
     return q
+
+
+def parse_document(path, **meta_data):
+    d = dict(meta_data)
+    d.setdefault('path', path)
+    d.setdefault('name', os.path.splitext(os.path.basename(path))[0])
+    d.update(sections=get_sections(path, ['TABLE OF CONTENTS']))
+    return d
