@@ -8,8 +8,8 @@ import pdf2image
 import pytesseract
 import tqdm
 
-from config import CORPUS_BASEDIR, TESSERACT_BIN
-from misty.utils import mkdir
+from .config import CORPUS_BASEDIR, TESSERACT_BIN
+from .utils import mkdir
 
 
 def pil_to_b64(image):
@@ -20,9 +20,8 @@ def pil_to_b64(image):
 
 def ocrpdf(path):
     logging.info(f"Extracting page images from {path}")
-    images = list(pdf2image.convert_from_path(path))
-    logging.info("Using neural network to identify lines and convert graphemes into text.")
-    for image in tqdm.tqdm(images):
+    logging.info("Using neural network to identify lines, and convert graphemes into text.")
+    for image in tqdm.tqdm(pdf2image.convert_from_path(path)):
         pytesseract.pytesseract.tesseract_cmd = TESSERACT_BIN
         text = pytesseract.image_to_string(image)
         yield image, text.strip()

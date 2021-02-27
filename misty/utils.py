@@ -10,10 +10,10 @@ from itertools import cycle
 import bcolors
 
 from . import voices, tts, voice_desc, logger, en_stopwords
-
 # TODO googletrans
 # from googletrans import Translator
 # translator = Translator()
+from .config import DEFAULT_ENCODING
 
 voice_iter = cycle(voices.keys())
 
@@ -171,3 +171,8 @@ def for_file_path_name_ext_in(basedir):
 
         assert ext[0] == '.'
         yield path, name, file_name, ext[1:].lower()
+
+
+def save_txt(path, text):
+    with closing(open(path, 'w', encoding=DEFAULT_ENCODING)) as fh:
+        fh.write(text)

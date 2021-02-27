@@ -7,7 +7,8 @@ from whoosh.fields import SchemaClass, ID, TEXT, NUMERIC, KEYWORD
 from whoosh.qparser import QueryParser
 
 from .config import WHOOSH_INDEX_BASEDIR
-from .utils import mkdir, parse_document, for_file_path_name_by_ext
+from .tesseract import ocrpdf
+from .utils import mkdir, parse_document, for_file_path_name_by_ext, save_txt
 
 logger = logging.getLogger(os.path.basename(__file__))
 
@@ -55,8 +56,28 @@ class Indexer:
 
         mkdir(basedir)
 
-    def index_document(self, path):
+    def index_txt(self, path):
         document = parse_document(path)
+        self.index_parsed_document(document)
+
+    def index_pdf(self, path):
+        file_name = os.path.basename(path)
+        name, ext = os.path.splitext(file_name)
+
+        img_dir = os.path.join(os.path.dirname(path), name)
+        image_texts = list(ocrpdf(path))
+        for page_num, (image, text) in enumerate(image_texts):
+            img_path = os.path.join(img_dir, f"{page_num}.jpg")
+            image.save(img_path)
+
+            txt_path = os.path.join(img_dir, f"{page_num}.txt")
+            save_txt(txt_path, text)
+
+        document = dict(path=path,
+                        name=name,
+                        sections=dict(
+                            [(f"Page {i}", txt) for i, (img, txt) in enumerate(image_texts)]
+                        ))
         self.index_parsed_document(document)
 
     def refresh_index(self, basedir, remove_deleted=False):
@@ -66,7 +87,8 @@ class Indexer:
                 document = parse_document(path)
                 logger.info(f"Parsed {file_name} into {len(document['sections'])} sections.")
                 self.index_parsed_document(document)
-            # TODO: .pdf
+            if ext == 'pdf':
+                self.index_pdf(path)
             # TODO: .jpg
 
         ix = self.txt_idx = index.open_dir(self.txt_idx_path)
