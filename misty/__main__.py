@@ -34,6 +34,11 @@ class TxtSchema(SchemaClass):
 
 
 def main():
+    # TODO: argparse.ArgumentParser()
+
+    # speech = SpeechThread()
+    # speech.start()
+
     indexer = None
 
     mkdir(CORPUS_BASEDIR)
@@ -72,11 +77,11 @@ def main():
                 if section is None:
                     section = document
 
-                elif section.lower() == 'TABLE OF CONTENTS':
+                elif section.upper() == 'TABLE OF CONTENTS':
                     continue
 
                 else:
-                    print_and_say(f"{n}.\t{section}")
+                    print_and_say(section, print_prefix=f"{n}.\t")
 
                 for l, line in enumerate(lines):
                     indexer.add_document(path=path,
@@ -162,7 +167,7 @@ def main():
 
                             for line in highlights.split("\n"):
                                 if line:
-                                    print_and_say(f"\t\t\t{line}")
+                                    print_and_say(line, print_prefix="\t\t\t")
             else:
                 print_and_say(f"No hits for {q}.")
 
