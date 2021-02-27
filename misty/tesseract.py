@@ -12,12 +12,6 @@ from config import CORPUS_BASEDIR, TESSERACT_BIN
 from misty.utils import mkdir
 
 
-# windows?
-# tesseract https://github.com/UB-Mannheim/tesseract/wiki
-# poppler https://blog.alivate.com.au/poppler-windows/
-# copy some place, modify system to include bin folder in PATH
-# TODO: configure location for poppler
-
 def pil_to_b64(image):
     buffered = BytesIO()
     image.save(buffered, format="JPEG")
@@ -63,6 +57,7 @@ def ocrdir(basedir):
                 if not os.path.exists(txt_path):
                     with closing(open(txt_path, 'w', encoding='utf-8')) as fh:
                         fh.write(text)
+
 
 if __name__ == '__main__':
     ocrdir(CORPUS_BASEDIR)
