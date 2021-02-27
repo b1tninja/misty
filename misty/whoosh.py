@@ -64,20 +64,20 @@ class Indexer:
         file_name = os.path.basename(path)
         name, ext = os.path.splitext(file_name)
 
-        img_dir = os.path.join(os.path.dirname(path), name)
+        out_dir = os.path.join(os.path.dirname(path), name)
+        mkdir(out_dir)
         image_texts = list(ocrpdf(path))
         for page_num, (image, text) in enumerate(image_texts):
-            img_path = os.path.join(img_dir, f"{page_num}.jpg")
+            img_path = os.path.join(out_dir, f"{page_num}.jpg")
             image.save(img_path)
 
-            txt_path = os.path.join(img_dir, f"{page_num}.txt")
+            txt_path = os.path.join(out_dir, f"{page_num}.txt")
             save_txt(txt_path, text)
 
         document = dict(path=path,
                         name=name,
-                        sections=dict(
-                            [(f"Page {i}", txt) for i, (img, txt) in enumerate(image_texts)]
-                        ))
+                        sections=dict([(f"Page {i}", txt) for i, (img, txt) in enumerate(image_texts)]))
+
         self.index_parsed_document(document)
 
     def refresh_index(self, basedir, remove_deleted=False):
