@@ -17,9 +17,9 @@ import string
 def lookup(word):
     word = "".join(x for x in word if x in set(string.ascii_letters))
     print_and_say(word, print_prefix=bcolors.UNDERLINE + bcolors.BOLD, print_suffix=bcolors.END)
-    yield from read_definitions(word)
     yield from read_synonyms(word)
     yield from read_antonyms(word)
+    yield from read_definitions(word)
 
 
 def read_synonyms(word):
@@ -40,7 +40,7 @@ def read_antonyms(word):
     else:
         print_and_say(f"Found {len(antonyms)}  antonyms for {word}.")
         for n, antonym in enumerate(antonyms):
-            print_and_say(f"\t{n + 1}.\t {antonym}.")
+            print_and_say(antonym, print_prefix=f"\t{n + 1}.\t")
             yield antonym
 
 
@@ -59,7 +59,7 @@ def read_definitions(word):
 
 
 if __name__ == '__main__':
-    pending = deque(['prescribe'])
+    pending = deque(['keeper'])
 
     while pending:
         try:
