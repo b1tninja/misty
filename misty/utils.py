@@ -137,3 +137,37 @@ def parse_document(path, **meta_data):
     d.setdefault('name', os.path.splitext(os.path.basename(path))[0])
     d.update(sections=get_sections(path, ['TABLE OF CONTENTS']))
     return d
+
+
+# TODO: fridge detective tangent?
+def for_file_path_name_by_ext(basedir, ext):
+    if type(ext) is list:
+        ext = list(map(str.lower, ext))
+
+    for path, name, file_name, file_ext in for_file_path_name_ext_in(basedir):
+        assert type(ext) in [list, str]
+        if type(ext) is str and file_ext.lower() != ext.lower():
+            continue
+
+        elif type(ext) is list and file_ext not in ext:
+            continue
+
+        yield path, name, file_name, file_ext
+
+
+def for_path_name_is_file_in(basedir):
+    for name in os.listdir(basedir):
+        path = os.path.join(basedir, name)
+        is_file = os.path.isfile(path)
+        yield path, name, is_file
+
+
+def for_file_path_name_ext_in(basedir):
+    for path, name, is_file in for_path_name_is_file_in(basedir):
+        if not is_file:
+            continue
+
+        file_name, ext = os.path.splitext(name)
+
+        assert ext[0] == '.'
+        yield path, name, file_name, ext[1:].lower()
