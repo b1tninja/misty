@@ -13,6 +13,8 @@ import bcolors
 import html2text
 import tqdm
 
+from misty.whoosh import Indexer
+
 logger = logging.getLogger(os.path.basename(__file__))
 
 # TODO: downloader
@@ -20,6 +22,29 @@ logger = logging.getLogger(os.path.basename(__file__))
 LEGINFO_BASEDIR = r"D:\downloads.leginfo.legislature.ca.gov"
 ENCODING = 'utf-8'
 CURRENT_YEAR = datetime.datetime.today().year
+
+law_fmt = """
+{CODE_HEADING}
+    {DIVISION_HEADING}
+        {CHAPTER_HEADING}
+{ARTICLE_HEADING} ( {ARTICLE_HISTORY} )
+
+{SECTION_TITLE}
+{LEGAL_TEXT}
+{SECTION_HISTORY}
+"""
+
+color_law_fmt = f"""
+{bcolors.BLUE}{{CODE_HEADING}}{bcolors.ENDC}
+    {{DIVISION_HEADING}}
+        {{CHAPTER_HEADING}}
+
+{bcolors.UNDERLINE}{{ARTICLE_HEADING}}{bcolors.ENDC} ( {bcolors.ITALIC}{{ARTICLE_HISTORY}}{bcolors.ENDC} )
+
+{bcolors.BOLD}{{SECTION_TITLE}}{bcolors.ENDC}
+{{LEGAL_TEXT}}
+{bcolors.ITALIC}{{SECTION_HISTORY}}{bcolors.ENDC}
+"""
 
 
 class LawLibrary:
@@ -181,13 +206,35 @@ def LawTocSectionsTblDict(ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDE
 
 
 @starg
-def LawSectionTblDict(ID, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE: Optional[str],
+def LawSectionTblDict(PK, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE: Optional[str],
                       LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG,
                       TRANS_UID, TRANS_UPDATE):
+    # NOTE: changed ID to PK to avoid conflict with whoosh.fields.ID
     if EFFECTIVE_DATE is not None:
-        EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE).date()
+        EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE)  # .date()
+
+    if DIVISION:
+        DIVISION = DIVISION.rstrip('.')
+
+    if TITLE:
+        TITLE = TITLE.rstrip('.')
+
+    if PART:
+        PART = PART.rstrip('.')
+
+    if CHAPTER:
+        CHAPTER = CHAPTER.rstrip('.')
+
+    if ARTICLE:
+        ARTICLE = ARTICLE.rstrip('.')
+
+    if SECTION_NUM:
+        SECTION_NUM = SECTION_NUM.rstrip('.')
+
+    ACTIVE_FLG = 'Y' == ACTIVE_FLG
 
     TRANS_UPDATE = datetime.datetime.fromisoformat(TRANS_UPDATE)
+
     return dict(**locals())
 
 
@@ -218,15 +265,13 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
 
         try:
             d = LawSectionTblDict(law_section)
-            d.update(CODE=LAW_CODE,
-                     CODE_HEADING=CODES_TBL[LAW_CODE],
+            d.update(CODE_HEADING=CODES_TBL[LAW_CODE],
                      DIVISION_HEADING=toc_tbl[LAW_CODE][DIVISION][None][None]['HEADING'],
                      CHAPTER_HEADING=toc_tbl[LAW_CODE][DIVISION][CHAPTER][None]['HEADING'],
                      ARTICLE_HEADING=toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]['HEADING'],
                      ARTICLE_HISTORY=toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]['HISTORY_NOTE'],
                      LEGAL_TEXT=LOB,
                      SECTION_TITLE=code_section_titles[LAW_CODE].get(SECTION_NUM, {}).get('TITLE'),
-                     SECTION_NUM=SECTION_NUM,
                      SECTION_HISTORY=HISTORY)
 
         except:
@@ -237,36 +282,26 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
             yield d
 
 
-law_fmt = """
-{CODE_HEADING}
-    {DIVISION_HEADING}
-        {CHAPTER_HEADING}
-{ARTICLE_HEADING} ( {ARTICLE_HISTORY} )
-
-{SECTION_TITLE}
-{LEGAL_TEXT}
-{SECTION_HISTORY}
-"""
-
-color_law_fmt = f"""
-{bcolors.BLUE}{{CODE_HEADING}}{bcolors.ENDC}
-    {{DIVISION_HEADING}}
-        {{CHAPTER_HEADING}}
-
-{bcolors.UNDERLINE}{{ARTICLE_HEADING}}{bcolors.ENDC} ( {bcolors.ITALIC}{{ARTICLE_HISTORY}}{bcolors.ENDC} )
-
-{bcolors.BOLD}{{SECTION_TITLE}}{bcolors.ENDC}
-{{LEGAL_TEXT}}
-{bcolors.ITALIC}{{SECTION_HISTORY}}{bcolors.ENDC}
-"""
-
-if __name__ == '__main__':
-    for path, (dats, lobs) in get_datses_and_lobses(LEGINFO_BASEDIR, prefixes=['LAW', 'CODE']):
+def index_pubinfos(basedir=LEGINFO_BASEDIR):
+    indexer = Indexer()
+    for pubinfo_path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
         try:
-            color = False
+            laws = parse_datlobs(lobs, **dats)
+            indexer.index_pubinfo_laws(pubinfo_path, laws)
+
+        except TypeError as e:
+            logger.warning(f"Skipping {pubinfo_path}... {e}.")
+
+
+def print_pubinfos(basedir=LEGINFO_BASEDIR):
+    for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
+        try:
             for law in parse_datlobs(lobs, **dats):
-                pass
-                # print((color_law_fmt if color else law_fmt).format(**law))
+                print(law_fmt.format(**law))
 
         except TypeError as e:
             logger.warning(f"Skipping {path}... {e}.")
+
+
+if __name__ == '__main__':
+    index_pubinfos()

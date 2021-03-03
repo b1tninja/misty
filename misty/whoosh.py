@@ -4,7 +4,7 @@ from enum import Enum, auto
 
 from PIL import Image
 from whoosh import highlight, index
-from whoosh.fields import SchemaClass, ID, TEXT, NUMERIC, KEYWORD
+from whoosh.fields import SchemaClass, ID, TEXT, NUMERIC, DATETIME, BOOLEAN
 from whoosh.qparser import QueryParser
 
 from .config import WHOOSH_INDEX_BASEDIR
@@ -23,17 +23,32 @@ class TxtSchema(SchemaClass):
 
 
 class LawSchema(SchemaClass):
-    CODE = KEYWORD(stored=True)
-    DIVISION = ID(stored=True)
-    TITLE = ID(stored=True)
-    CHAPTER = ID(stored=True)
-    ARTICLE = ID(stored=True)
+    PK = ID(unique=True)
+    ACTIVE_FLG = BOOLEAN()
+    ARTICLE = ID()
+    ARTICLE_HEADING = TEXT(stored=True)
     ARTICLE_HISTORY = TEXT(stored=True)
-    SECTION_NUM = NUMERIC(stored=True)
+    CHAPTER = ID()
+    CHAPTER_HEADING = TEXT(stored=True)
+    CODE_HEADING = TEXT(stored=True)
+    DIVISION = ID()
+    DIVISION_HEADING = TEXT(stored=True)
+    EFFECTIVE_DATE = DATETIME(stored=True)
+    HISTORY = TEXT(stored=True)
+    LAW_CODE = ID()
+    LAW_SECTION_VERSION_ID = ID()
     LEGAL_TEXT = TEXT(stored=True)
+    LOB_FILE = ID()
+    OP_CHAPTER = ID()
+    OP_SECTION = ID()
+    OP_STATUES = ID()
+    PART = ID()
     SECTION_HISTORY = TEXT(stored=True)
-    OP_STATUTE = ID(stored=True)
-    OP_CHAPTER = ID(stored=True)
+    SECTION_NUM = ID(stored=True)
+    SECTION_TITLE = TEXT(stored=True)
+    TITLE = ID()
+    TRANS_UID = ID()
+    TRANS_UPDATE = DATETIME()
 
 
 class IndexState(Enum):
@@ -140,8 +155,15 @@ class Indexer:
                                         line=l,
                                         content=line)
 
-    def index_law_section(self, law_section):
-        pass
+    def index_pubinfo_laws(self, pubinfo, laws):
+        if mkdir(self.law_idx_path):
+            law_idx = index.create_in(self.law_idx_path, LawSchema)
+        else:
+            law_idx = index.open_dir(self.law_idx_path)
+
+        with law_idx.writer() as writer:
+            for law in laws:
+                writer.add_document(**law)
 
     def search(self, q, callback):
         idx = index.open_dir(self.txt_idx_path)
