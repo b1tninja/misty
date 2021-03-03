@@ -165,7 +165,7 @@ class Indexer:
             for law in laws:
                 writer.add_document(**law)
 
-    def search(self, q, callback):
+    def search_txt(self, q, callback):
         idx = index.open_dir(self.txt_idx_path)
         with idx.searcher() as searcher:
             parser = QueryParser("content", idx.schema).parse(q)
@@ -175,5 +175,12 @@ class Indexer:
             results.formatter = highlight.UppercaseFormatter()
             callback(results)
 
-    def index_codes(self, *args, **kwargs):
-        pass
+    def search_law(self, q, callback):
+        idx = index.open_dir(self.law_idx_path)
+        with idx.searcher() as searcher:
+            parser = QueryParser("LEGAL_TEXT", idx.schema).parse(q)
+            results = searcher.search(parser)
+            # results.fragmenter = highlight.PinpointFragmenter(surround=64, autotrim=True)
+            results.fragmenter = highlight.ContextFragmenter(surround=128)
+            results.formatter = highlight.UppercaseFormatter()
+            callback(results)

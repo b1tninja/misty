@@ -1,5 +1,6 @@
 import logging
 
+from .ca import color_law_fmt
 from .config import CORPUS_BASEDIR, TTS_BASEDIR
 from .utils import print_and_say, mkdir, query
 from .whoosh import Indexer
@@ -12,7 +13,7 @@ def main():
     mkdir(CORPUS_BASEDIR)
     mkdir(TTS_BASEDIR)
     indexer = Indexer()
-    indexer.refresh_index(CORPUS_BASEDIR)
+    # indexer.refresh_index(CORPUS_BASEDIR)
 
     ################################ QUERY ################################
     while True:
@@ -51,7 +52,20 @@ def main():
                                 if line:
                                     print_and_say(line, print_prefix="\t\t\t")
 
-        indexer.search(q, print_results)
+        # indexer.search_txt(q, print_results)
+
+        def print_law_results(results):
+            nonlocal q
+
+            if not results:
+                print_and_say(f"No hits for {q}.")
+            else:
+                print_and_say(f"{len(results)} hits for: {q}.")
+
+                for result in results:
+                    print(color_law_fmt.format(**result))
+
+        indexer.search_law(q, print_law_results)
 
 
 if __name__ == '__main__':
