@@ -1,15 +1,17 @@
 import datetime
 import logging
 from itertools import permutations
-from random import sample
+from random import sample, randint
+from string import ascii_letters
 
 from nltk.corpus import brown
 
 from misty.utils import print_and_say
 
 category = sample(brown.categories(), 3)[0]
+category = None
 
-print_and_say(f"Selected {category} for sub words")
+# print_and_say(f"Selected {category} for sub words")
 
 logging.warning("Loading Brown University corpus of words")
 words = set(map(str.lower, brown.words(categories=category)))  # nltk.corpus.brown
@@ -24,6 +26,7 @@ def variants(charset):
 
 def get_subwords(word):
     logging.info(f"Iterating over permutations of {word}")
+    print_and_say(word, next_voice=True)
     variations = variants(word)
     # skip = next(variations)
     for i, variant in enumerate(variations, start=1):
@@ -39,13 +42,17 @@ def get_subwords_of_phrase(phrase):
 
 
 if __name__ == '__main__':
-    phrase = 'Whether tis nobler in the mind to suffer'.lower()
+    original = "capitulate"  # lactate promulgate
+    print_and_say(original)
+    parts = [c for c in original.lower() if c in set(ascii_letters + ' ')]
+    # shuffle(parts)
+    phrase = ''.join(parts)
     start = datetime.datetime.now()
-    words = list(get_subwords_of_phrase(phrase))
+    words = list(get_subwords_of_phrase(' '.join(set(phrase.split(' ')))))
     wc = len(phrase.split(' '))
-    l = wc
     while True:
-        # l = randint(1, wc)
+        l = randint(1, wc)
+        # l = randint(1, min(max(len(words),12), len(words)))
         combination = sample(words, l)
         reconstruction = ' '.join(combination)
 
@@ -55,23 +62,4 @@ if __name__ == '__main__':
         print_and_say(reconstruction, next_voice=True)
 
     finish = datetime.datetime.now()
-    print_and_say(f"{reconstruction} was found in {finish - start}", next_voice=True)
-
-# if __name__ == '__main__':
-#     words = list(get_subwords_of_phrase(phrase))
-#     shuffle(words)
-#     # for l in range(len(phrase.split(' ')):
-#     l = len(phrase.split(' '))
-#     for i, combination in enumerate(combinations(words, l), start=1):
-#         combination = list(combination)
-#         shuffle(combination)
-#         print_and_say(' '.join(combination), print_prefix=f"{i}.\t", next_voice=True)
-#
-#
-# if __name__ == '__main__':
-#     words = set(get_subwords(''))
-#     for l in range(len(words)):
-#         combs = list(combinations(words, l))
-#         shuffle(combs)
-#         for i, combination in enumerate(combs, start=1):
-#             print_and_say(' '.join(combination), print_prefix=f"{i}.\t", next_voice=True)
+    print_and_say(f"{reconstruction} was found in {(finish - start).total_seconds()} seconds", next_voice=True)
