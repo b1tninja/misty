@@ -1,7 +1,7 @@
 import datetime
 import logging
 from itertools import permutations
-from random import sample, randint
+from random import sample
 
 from nltk.corpus import brown
 
@@ -42,13 +42,15 @@ if __name__ == '__main__':
     phrase = 'Whether tis nobler in the mind to suffer'.lower()
     start = datetime.datetime.now()
     words = list(get_subwords_of_phrase(phrase))
+    wc = len(phrase.split(' '))
+    l = wc
     while True:
-        l = randint(1, len(phrase.split(' ')))
+        # l = randint(1, wc)
         combination = sample(words, l)
         reconstruction = ' '.join(combination)
 
         if reconstruction == phrase:
-            break
+            break  # Alert wikipedia! TODO: update wikipedia https://en.wikipedia.org/wiki/Infinite_monkey_theorem
 
         print_and_say(reconstruction, next_voice=True)
 
