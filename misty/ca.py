@@ -358,7 +358,7 @@ if __name__ == '__main__':
     try:
         parser.add_argument('-c', '--color', action=argparse.BooleanOptionalAction, default=False)
     except:
-        parser.add_argument('-c', '--color', type=bool)
+        parser.add_argument('-c', '--color', action="store_true")
     # TODO: colorize should only be used with --plaintext
     # parser.add_argument('query', nargs=argparse.REMAINDER)
 
