@@ -14,7 +14,7 @@ Unfamiliar with Python Virtual Environments? Read the [venv](https://docs.python
 
 `ca.py` is a California codes reader, capable of full text search and plain text printing of the [pubinfo_2021.zip](https://downloads.leginfo.legislature.ca.gov/pubinfo_2021.zip).
 
-The plain-text capabilities come from Aaron Swartz's html2text library.
+The plain-text capabilities come from Aaron Swartz's [html2text](https://pypi.org/project/html2text/) library.
 
 Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf).
 
