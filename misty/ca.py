@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 # wget --mirror https://downloads.leginfo.legislature.ca.gov/
 # --path should be a directory containing pubinfo_2021.zip
 
@@ -28,9 +31,6 @@ ansi_escape_codes = {'OK': '\x1b[92m',
                      'HEADER': '\x1b[95m\x1b[1m',
                      'PASS': '\x1b[92m\x1b[1m',
                      'FAIL': '\x1b[31m\x1b[1m',
-                     'OKMSG': '\x1b[1m\x1b[92m✅  ',
-                     'ERRMSG': '\x1b[1m\x1b[31m\x1b[1m❌  ',
-                     'WAITMSG': '\x1b[1m\x1b[93m⌛  ',
                      'HELP': '\x1b[93m',
                      'BITALIC': '\x1b[1m\x1b[3m',
                      'BLUEIC': '\x1b[1m\x1b[3m\x1b[92m',
