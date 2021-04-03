@@ -36,7 +36,7 @@ sudo apt install python3-pip
 ### virtualenv for python (optional)
 Unfamiliar with Python Virtual Environments? Read the [venv](https://docs.python.org/3/tutorial/venv.html) docs.
 
-Install virtualenv for python3
+#### Install virtualenv for python3
 ```shell
 sudo apt install python3-virtualenv
 ```
@@ -44,7 +44,9 @@ or (but not both)
 ```shell
 sudo pip3 --install virtualenv
 ```
-Create a new virtualenv, a sort of local python environment to install the optional dependencies in.
+
+#### Create a new virtualenv
+virtualenvs are sort of user copies of a python environment to install the optional dependencies in.
 ```shell
 cd misty
 python3 -m virtualenv venv
@@ -53,13 +55,13 @@ Activate this "virtualenv" (changes which python/pip binaries are used)
 ```shell
 . venv/bin/activate
 ```
-Install optional dependencies
+### Install optional dependencies
+Using requirements.txt
+```shell
+pip3 install -r requirements.txt
+```
+or pick and choose
 ```shell
 pip3 install html2text
 pip3 install tqdm
 ```
-or use requirements.txt
-```shell
-pip3 install -r requirements.txt
-```
-
