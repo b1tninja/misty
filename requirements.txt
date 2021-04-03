@@ -1,6 +1,6 @@
-pyttsx3==2.90
-Whoosh==2.7.4
-PyDictionary==2.0.1
+pyttsx3
+Whoosh
+PyDictionary
 yelpapi
 tqdm
 bcolors
