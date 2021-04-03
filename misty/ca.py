@@ -1,3 +1,6 @@
+# wget --mirror https://downloads.leginfo.legislature.ca.gov/
+# --path should be a directory containing pubinfo_2021.zip
+
 import datetime
 import io
 import json
@@ -5,46 +8,52 @@ import logging
 import os
 import os.path
 import pprint
+import sys
 import zipfile
 from contextlib import closing
-from typing import Optional
-
-import bcolors
-import html2text
-import tqdm
-
-from misty.whoosh import Indexer
 
 logger = logging.getLogger(os.path.basename(__file__))
-
-# TODO: downloader
-# wget --mirror https://downloads.leginfo.legislature.ca.gov/
-LEGINFO_BASEDIR = r"D:\downloads.leginfo.legislature.ca.gov"
 ENCODING = 'utf-8'
 CURRENT_YEAR = datetime.datetime.today().year
 
-law_fmt = """
-{CODE_HEADING}
-    {DIVISION_HEADING}
-        {CHAPTER_HEADING}
-{ARTICLE_HEADING} ( {ARTICLE_HISTORY} )
+# Instead of importing bcolors, just stole the dictionary. Props to Yogesh Sharma
+ansi_escape_codes = {'OK': '\x1b[92m',
+                     'WARN': '\x1b[93m',
+                     'ERR': '\x1b[31m',
+                     'UNDERLINE': '\x1b[4m',
+                     'ITALIC': '\x1b[3m',
+                     'BOLD': '\x1b[1m',
+                     'BLUE': '\x1b[94m',
+                     'ENDC': '\x1b[0m',
+                     'HEADER': '\x1b[95m\x1b[1m',
+                     'PASS': '\x1b[92m\x1b[1m',
+                     'FAIL': '\x1b[31m\x1b[1m',
+                     'OKMSG': '\x1b[1m\x1b[92m✅  ',
+                     'ERRMSG': '\x1b[1m\x1b[31m\x1b[1m❌  ',
+                     'WAITMSG': '\x1b[1m\x1b[93m⌛  ',
+                     'HELP': '\x1b[93m',
+                     'BITALIC': '\x1b[1m\x1b[3m',
+                     'BLUEIC': '\x1b[1m\x1b[3m\x1b[92m',
+                     'END': '\x1b[0m'}
 
-{SECTION_TITLE}
-{LEGAL_TEXT}
-{SECTION_HISTORY}
-"""
+try:
+    import html2text
+except:
+    logger.error(
+        "Aaron Swartz's python-html2text failed to load, may need to be installed to parse HTML/CAML into MarkDown/plain-text.")
+    html2text = False
 
-color_law_fmt = f"""
-{bcolors.BLUE}{{CODE_HEADING}}{bcolors.ENDC}
-    {{DIVISION_HEADING}}
-        {{CHAPTER_HEADING}}
 
-{bcolors.UNDERLINE}{{ARTICLE_HEADING}}{bcolors.ENDC} ( {bcolors.ITALIC}{{ARTICLE_HISTORY}}{bcolors.ENDC} )
-
-{bcolors.BOLD}{{SECTION_TITLE}}{bcolors.ENDC}
-{{LEGAL_TEXT}}
-{bcolors.ITALIC}{{SECTION_HISTORY}}{bcolors.ENDC}
-"""
+def opt_tqdm(iterable):
+    """
+    Optional tqdm progress bars
+    """
+    try:
+        import tqdm
+    except:
+        return iterable
+    else:
+        return tqdm.tqdm(iterable)
 
 
 class LawLibrary:
@@ -76,35 +85,32 @@ def read_rows_from_zipped(zip_file, target):
                     col for col in row)
 
 
-def get_dats_and_lobs(path, prefixes=None, txt=True, width=0):
+def get_dats_and_lobs(path, prefixes=None):
     """gotta get dats... and lobs"""
     # https://youtu.be/IC9nuBmeX-A
     basename = os.path.basename(path)
     dats = dict()
     lobs = dict()
 
-    print(f"Extracting dats and lobs from {basename}...")
+    print("Extracting dats and lobs from: %s...", basename)
     with zipfile.ZipFile(path) as zf:
-        for file in tqdm.tqdm(zf.filelist):
+        for file in opt_tqdm(zf.filelist):
             name, ext = os.path.splitext(file.filename)
             if type(prefixes) is list and not any([file.filename.startswith(p) for p in prefixes]):
-                logger.debug(f"Skipping {file.filename}...")
+                logger.debug("Skipping: %s", file.filename)
                 continue
 
             if ext == '.dat':
                 dats[name] = list(read_rows_from_zipped(zf, file))
 
             elif ext == '.lob':
-                if txt:
-                    # Information is power. But like all power, there are those who want to keep it for themselves.
-                    html2txt = html2text.HTML2Text(bodywidth=width)
-                    html = read_text_from_zipped_file(zf, file.filename)
-                    TEXT = html2txt.handle(html)
-                    lobs[file.filename] = TEXT
+                CAML = read_text_from_zipped_file(zf, file.filename)
+                if html2text:
+                    lobs[file.filename] = html2text.HTML2Text(bodywidth=0).handle(CAML)
                 else:
-                    lobs[file.filename] = zf.read(file.filename)
+                    lobs[file.filename] = CAML
             else:
-                logger.debug(f"Unhandled content: {file.filename}")
+                logger.debug("Unhandled content: %s", file.filename)
 
     return dats, lobs
 
@@ -126,7 +132,7 @@ def unzip_dats_and_lobs(path, **kwargs):
         dats, lobs = get_dats_and_lobs(path, **kwargs)
         pubinfo = dict(dats=dats, lobs=lobs)
 
-        logger.info(f'Writting json version of dats and lobs found "{path}" to "{os.path.basename(json_path)}".')
+        logger.info('Writting json version of dats and lobs found "%s" to "%s".', path, os.path.basename(json_path))
 
         with closing(open(json_path, 'w', encoding=ENCODING)) as fh:
             try:
@@ -161,6 +167,10 @@ def starg(func):
     return lambda args: func(*args)
 
 
+def datetime_fromiso(dt):
+    return datetime.datetime.strptime(dt, '%Y-%m-%d %H:%M:%S')
+
+
 @starg
 def LawTocTblDict(LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, ACTIVE_FLG, TRANS_UID, TRANS_UPDATE,
                   NODE_SEQUENCE, NODE_LEVEL, NODE_POSITION, NODE_TREEPATH, CONTAINS_LAW_SECTIONS, HISTORY_NOTE,
@@ -178,7 +188,7 @@ def LawTocTblDict(LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, AC
     # HEADING
     ACTIVE_FLG = 'Y' == ACTIVE_FLG
     # TRANS_UID
-    TRANS_UPDATE = datetime.datetime.fromisoformat(TRANS_UPDATE)
+    TRANS_UPDATE = datetime_fromiso(TRANS_UPDATE)
     NODE_SEQUENCE = int(NODE_SEQUENCE)
     NODE_LEVEL = int(NODE_LEVEL)
     NODE_POSITION = int(NODE_POSITION)
@@ -201,17 +211,17 @@ def LawTocTblDict(LAW_CODE, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HEADING, AC
 def LawTocSectionsTblDict(ID, LAW_CODE, NODE_TREEPATH, SECTION_NUM, SECTION_ORDER, TITLE, OP_STATUES, OP_CHAPTER,
                           OP_SECTION, TRANS_UID, TRANS_UPDATE, LAW_SECTION_VERSION_ID, SEQ_NUM):
     NODE_TREEPATH = tuple(map(int, NODE_TREEPATH.split('.')))
-    TRANS_UPDATE = datetime.datetime.fromisoformat(TRANS_UPDATE)
+    TRANS_UPDATE = datetime_fromiso(TRANS_UPDATE)
     return dict(**locals())
 
 
 @starg
-def LawSectionTblDict(PK, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE: Optional[str],
+def LawSectionTblDict(PK, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECTION, EFFECTIVE_DATE,
                       LAW_SECTION_VERSION_ID, DIVISION, TITLE, PART, CHAPTER, ARTICLE, HISTORY, LOB_FILE, ACTIVE_FLG,
                       TRANS_UID, TRANS_UPDATE):
     # NOTE: changed ID to PK to avoid conflict with whoosh.fields.ID
     if EFFECTIVE_DATE is not None:
-        EFFECTIVE_DATE = datetime.datetime.fromisoformat(EFFECTIVE_DATE)  # .date()
+        EFFECTIVE_DATE = datetime_fromiso(EFFECTIVE_DATE)  # .date()
 
     if DIVISION:
         DIVISION = DIVISION.rstrip('.')
@@ -233,7 +243,7 @@ def LawSectionTblDict(PK, LAW_CODE, SECTION_NUM, OP_STATUES, OP_CHAPTER, OP_SECT
 
     ACTIVE_FLG = 'Y' == ACTIVE_FLG
 
-    TRANS_UPDATE = datetime.datetime.fromisoformat(TRANS_UPDATE)
+    TRANS_UPDATE = datetime_fromiso(TRANS_UPDATE)
 
     return dict(**locals())
 
@@ -270,7 +280,7 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
                      CHAPTER_HEADING=toc_tbl[LAW_CODE][DIVISION][CHAPTER][None]['HEADING'],
                      ARTICLE_HEADING=toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]['HEADING'],
                      ARTICLE_HISTORY=toc_tbl[LAW_CODE][DIVISION][CHAPTER][ARTICLE]['HISTORY_NOTE'],
-                     LEGAL_TEXT=LOB,
+                     LAW=LOB,
                      SECTION_TITLE=code_section_titles[LAW_CODE].get(SECTION_NUM, {}).get('TITLE'),
                      SECTION_HISTORY=HISTORY)
 
@@ -282,26 +292,84 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
             yield d
 
 
-def index_pubinfos(basedir=LEGINFO_BASEDIR):
+def index_pubinfos(basedir):
+    """whoosh fulltext search index of the pubinfo, currently each individual section from  the CODES/LAW table"""
+    from misty.whoosh import Indexer
+
     indexer = Indexer()
-    for pubinfo_path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
+    for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
+        logging.info("Pubinfo zip: %s", path)
         try:
             laws = parse_datlobs(lobs, **dats)
-            indexer.index_pubinfo_laws(pubinfo_path, laws)
+            indexer.index_pubinfo_laws(path, laws)
 
         except TypeError as e:
-            logger.warning(f"Skipping {pubinfo_path}... {e}.")
+            logger.warning("Skipping %s... %s.", path, e)
+    else:
+        logger.info("No more pubinfo_*.zip(s) to index in %s", basedir)
 
 
-def print_pubinfos(basedir=LEGINFO_BASEDIR):
+def print_pubinfos(basedir, colorize=False):
+    """Print pubinfo laws directly from odd-year pubinfos"""
+    # First replace the ANSI terminal codes in the format string for colorized output
+    law_fmt = \
+"""
+{BLUE}{{CODE_HEADING}}{ENDC}
+    {{DIVISION_HEADING}}
+        {{CHAPTER_HEADING}}
+
+{UNDERLINE}{{ARTICLE_HEADING}}{ENDC} ( {ITALIC}{{ARTICLE_HISTORY}}{ENDC} )
+
+{BOLD}{{SECTION_TITLE}}{ENDC}
+{{LAW}}
+{ITALIC}{{SECTION_HISTORY}}{ENDC}
+""".format_map(ansi_escape_codes if colorize else dict([(k, '') for k in ansi_escape_codes.keys()]))
+
     for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
+        logging.info("Pubinfo zip: %s", path)
         try:
             for law in parse_datlobs(lobs, **dats):
                 print(law_fmt.format(**law))
 
         except TypeError as e:
-            logger.warning(f"Skipping {path}... {e}.")
+            logger.warning("Skipping %s... %s.", path, e)
+    else:
+        logger.info("No more pubinfo_*.zip(s) to index in dir: %s", basedir)
+
+
+def dir_path(path):
+    logger.info("Checking --path %s")
+    if os.path.isdir(path):
+        return path
+    else:
+        raise NotADirectoryError(path)
 
 
 if __name__ == '__main__':
-    index_pubinfos()
+    import argparse
+
+    parser = argparse.ArgumentParser(description='downloads.leginfo.legislature.ca.gov pubinfo_*.zip Code reader.')
+    parser.add_argument('--path', type=dir_path,
+                        default='downloads.leginfo.legislature.ca.gov',
+                        help="Path of directory containing pubinfo_2021.zip from downloads.leginfo.legislature.ca.gov")
+    # TODO: downloader
+    # parser.add_argument('-d', '--download', action=argparse.BooleanOptionalAction)
+    # parser.add_argument('-i', '--index', action=argparse.BooleanOptionalAction)
+    try:
+        parser.add_argument('-c', '--color', action=argparse.BooleanOptionalAction, default=False)
+    except:
+        parser.add_argument('-c', '--color', type=bool)
+    # TODO: colorize should only be used with --plaintext
+    # parser.add_argument('query', nargs=argparse.REMAINDER)
+
+    try:
+        args = parser.parse_args()
+    except NotADirectoryError:
+        logger.critical("Please specify a path to a directory containing pubinfo_2021.zip")
+        parser.print_help(sys.stderr)
+    else:
+        # TODO: hook whoosh indexer back up, removed temporarily to eliminate dependencies
+        # if args.index:
+        #     index_pubinfos()
+
+        print_pubinfos(args.path, colorize=args.color)
