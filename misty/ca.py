@@ -340,7 +340,7 @@ def print_pubinfos(basedir, colorize=False):
 
 
 def dir_path(path):
-    logger.info("Checking --path %s")
+    logger.info("Checking --path: %s", path)
     if os.path.isdir(path):
         return path
     else:
