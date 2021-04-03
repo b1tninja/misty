@@ -117,32 +117,33 @@ def get_dats_and_lobs(path, prefixes=None):
     return dats, lobs
 
 
-def unzip_dats_and_lobs(path, **kwargs):
+def unzip_dats_and_lobs(path, jsonp=False, **kwargs):
     assert os.path.isfile(path)
-    json_path = path + '.json'
 
     pubinfo = None
-    if os.path.exists(json_path):
+    json_path = path + '.jsonp'
+
+    if jsonp and os.path.exists(json_path):
         assert os.path.isfile(json_path)
         with closing(open(json_path, 'r', encoding=ENCODING)) as fh:
             try:
                 pubinfo = json.load(fh)
             except (json.JSONDecodeError, IOError):
-                pubinfo = None
+                pass
 
     if pubinfo is None:
         dats, lobs = get_dats_and_lobs(path, **kwargs)
         pubinfo = dict(dats=dats, lobs=lobs)
 
-        logger.info('Writting json version of dats and lobs found "%s" to "%s".', path, os.path.basename(json_path))
-
-        with closing(open(json_path, 'w', encoding=ENCODING)) as fh:
-            try:
-                json.dump(pubinfo, fh, ensure_ascii=False)  # ensure_ascii=True
-            except UnicodeEncodeError as e:
-                logger.warning("Not Plain-Text:", e)
-            except Exception as e:
-                logger.critical("Unable to write pubinfo JSON to disk", e)
+        if jsonp:
+            logger.info('Writting json version of dats and lobs found "%s" to "%s".', path, os.path.basename(json_path))
+            with closing(open(json_path, 'w', encoding=ENCODING)) as fh:
+                try:
+                    json.dump(pubinfo, fh, ensure_ascii=False)  # ensure_ascii=True
+                except UnicodeEncodeError as e:
+                    logger.warning("Not Plain-Text:", e)
+                except Exception as e:
+                    logger.critical("Unable to write pubinfo JSON to disk", e)
 
     return pubinfo.get('dats', []), pubinfo.get('lobs', [])
 
@@ -311,7 +312,7 @@ def index_pubinfos(basedir):
         logger.info("No more pubinfo_*.zip(s) to index in %s", basedir)
 
 
-def print_pubinfos(basedir, colorize=False):
+def print_pubinfos(basedir, colorize=False, jsonp=False):
     """Print pubinfo laws directly from odd-year pubinfos"""
     # First replace the ANSI terminal codes in the format string for colorized output
     law_fmt = \
@@ -327,7 +328,7 @@ def print_pubinfos(basedir, colorize=False):
 {ITALIC}{{SECTION_HISTORY}}{ENDC}
 """.format_map(ansi_escape_codes if colorize else dict([(k, '') for k in ansi_escape_codes.keys()]))
 
-    for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
+    for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE'], jsonp=jsonp):
         logger.info("Pubinfo zip: %s", path)
         try:
             for law in parse_datlobs(lobs, **dats):
@@ -359,8 +360,10 @@ if __name__ == '__main__':
     # parser.add_argument('-i', '--index', action=argparse.BooleanOptionalAction)
     try:
         parser.add_argument('-c', '--color', action=argparse.BooleanOptionalAction, default=False)
+        parser.add_argument('-j', '--json', action=argparse.BooleanOptionalAction, default=False, help="Export laws/codes into a .json per pubinfo by parsing the dats and lobs")
     except:
         parser.add_argument('-c', '--color', action="store_true")
+        parser.add_argument('-j', '--json', action="store_true")
     # TODO: colorize should only be used with --plaintext
     # parser.add_argument('query', nargs=argparse.REMAINDER)
 
@@ -374,4 +377,4 @@ if __name__ == '__main__':
         # if args.index:
         #     index_pubinfos()
 
-        print_pubinfos(args.path, colorize=args.color)
+        print_pubinfos(args.path, colorize=args.color, jsonp=args.json)

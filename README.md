@@ -51,7 +51,9 @@ virtualenvs are sort of user copies of a python environment to install the optio
 cd misty
 python3 -m virtualenv venv
 ```
-Activate this "virtualenv" (changes which python/pip binaries are used)
+
+#### Activate the "virtualenv"
+This changes which python/pip binaries are used, so you don't need to modify your (whole-)system python environment
 ```shell
 . venv/bin/activate
 ```
