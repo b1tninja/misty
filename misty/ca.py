@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
-# wget -r -c -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
-# --path should be a directory containing pubinfo_2021.zip, defaults to downloads.leginfo.legislature.ca.gov
-
 import datetime
 import io
 import json
@@ -39,10 +35,9 @@ ansi_escape_codes = {'OK': '\x1b[92m',
                      'END': '\x1b[0m'}
 
 try:
-    import html2text
+    import html2text  # Aaron Swartz original author
 except:
-    logger.error(
-        "Aaron Swartz's python-html2text failed to load, may need to be installed to parse HTML/CAML into MarkDown/plain-text.")
+    logger.error("python3-html2text needs to be installed to parse HTML/CAML into MarkDown/plain-text.")
     html2text = False
 
 
@@ -288,7 +283,8 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
                      SECTION_HISTORY=HISTORY)
 
         except:
-            logger.warning("Unexpected table structure, unsure how to format law section: ", LAW_CODE, DIVISION, CHAPTER, ARTICLE, SECTION_NUM)
+            logger.warning("Unexpected table structure, unsure how to format law section: ", LAW_CODE, DIVISION,
+                           CHAPTER, ARTICLE, SECTION_NUM)
             pprint.pprint(LawSectionTblDict(law_section))
 
         else:
@@ -360,7 +356,8 @@ if __name__ == '__main__':
     # parser.add_argument('-i', '--index', action=argparse.BooleanOptionalAction)
     try:
         parser.add_argument('-c', '--color', action=argparse.BooleanOptionalAction, default=False)
-        parser.add_argument('-j', '--json', action=argparse.BooleanOptionalAction, default=False, help="Export laws/codes into a .json per pubinfo by parsing the dats and lobs")
+        parser.add_argument('-j', '--json', action=argparse.BooleanOptionalAction, default=False,
+                            help="Export laws/codes into a .json per pubinfo by parsing the dats and lobs")
     except:
         parser.add_argument('-c', '--color', action="store_true")
         parser.add_argument('-j', '--json', action="store_true")
