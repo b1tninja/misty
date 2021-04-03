@@ -18,5 +18,9 @@ The plain-text capabilities come from Aaron Swartz's html2text library.
 
 Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf).
 
+```shell
+wget --mirror https://downloads.leginfo.legislature.ca.gov/ 
+python3 ca.py
+```
 
 The following sections of the Political Code are repealed:
