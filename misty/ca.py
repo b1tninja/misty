@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# wget -r -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
+# wget -r -c -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
 # --path should be a directory containing pubinfo_2021.zip, defaults to downloads.leginfo.legislature.ca.gov
 
 import datetime
@@ -15,7 +15,9 @@ import sys
 import zipfile
 from contextlib import closing
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(os.path.basename(__file__))
+
 ENCODING = 'utf-8'
 CURRENT_YEAR = datetime.datetime.today().year
 
@@ -92,7 +94,7 @@ def get_dats_and_lobs(path, prefixes=None):
     dats = dict()
     lobs = dict()
 
-    print("Extracting dats and lobs from: %s...", basename)
+    logger.info("Extracting dats and lobs from: %s", basename)
     with zipfile.ZipFile(path) as zf:
         for file in opt_tqdm(zf.filelist):
             name, ext = os.path.splitext(file.filename)
@@ -285,7 +287,7 @@ def parse_datlobs(LOBS, *, CODES_TBL, LAW_TOC_TBL, LAW_SECTION_TBL, LAW_TOC_SECT
                      SECTION_HISTORY=HISTORY)
 
         except:
-            logging.warning("Unexpected table structure, unsure how to format LawSe")
+            logger.warning("Unexpected table structure, unsure how to format law section: ", LAW_CODE, DIVISION, CHAPTER, ARTICLE, SECTION_NUM)
             pprint.pprint(LawSectionTblDict(law_section))
 
         else:
@@ -298,7 +300,7 @@ def index_pubinfos(basedir):
 
     indexer = Indexer()
     for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
-        logging.info("Pubinfo zip: %s", path)
+        logger.info("Pubinfo zip: %s", path)
         try:
             laws = parse_datlobs(lobs, **dats)
             indexer.index_pubinfo_laws(path, laws)
@@ -326,7 +328,7 @@ def print_pubinfos(basedir, colorize=False):
 """.format_map(ansi_escape_codes if colorize else dict([(k, '') for k in ansi_escape_codes.keys()]))
 
     for path, (dats, lobs) in get_datses_and_lobses(basedir, prefixes=['LAW', 'CODE']):
-        logging.info("Pubinfo zip: %s", path)
+        logger.info("Pubinfo zip: %s", path)
         try:
             for law in parse_datlobs(lobs, **dats):
                 print(law_fmt.format(**law))

@@ -8,7 +8,7 @@ Unfamiliar with Python Virtual Environments? Read the [venv](https://docs.python
 - [query](https://youtu.be/r_sMrRFOs9o)
 - [definitions.py](https://youtu.be/p3cHpwhZEfo)
 - [ud.py](https://youtu.be/Rjo20dU0LGA)
-- [ca.py]()
+- [ca.py](https://youtu.be/KEum-wb0A1M)
 
 ## California Codes
 
@@ -19,8 +19,6 @@ The plain-text capabilities come from Aaron Swartz's html2text library.
 Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf).
 
 ```shell
-wget -r -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
+wget -r -c -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
 python3 ca.py
 ```
-
-The following sections of the Political Code are repealed:
