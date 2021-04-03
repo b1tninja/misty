@@ -19,7 +19,7 @@ The plain-text capabilities come from Aaron Swartz's html2text library.
 Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf).
 
 ```shell
-wget --mirror https://downloads.leginfo.legislature.ca.gov/ 
+wget -r -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
 python3 ca.py
 ```
 

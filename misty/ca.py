@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-# wget --mirror https://downloads.leginfo.legislature.ca.gov/
-# --path should be a directory containing pubinfo_2021.zip
+# wget -r -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
+# --path should be a directory containing pubinfo_2021.zip, defaults to downloads.leginfo.legislature.ca.gov
 
 import datetime
 import io
