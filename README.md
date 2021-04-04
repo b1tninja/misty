@@ -15,7 +15,7 @@ Mystical Communal Promulgations... mulgare! Capitulate! Lactate! Promulgate!
 
 The plain-text capabilities come from Aaron Swartz's [html2text](https://pypi.org/project/html2text/) library.
 
-Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf), and my opinions about edicts of government on leginfo [feedback page](leginfo.legislature.ca.gov/faces/feedbackDetail.xhtml?primaryFeedbackId=prim1614216471200).
+Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf), and my opinions about edicts of government on leginfo [feedback page](https://leginfo.legislature.ca.gov/faces/feedbackDetail.xhtml?primaryFeedbackId=prim1614216471200).
 
 ```shell
 wget -r -c -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
