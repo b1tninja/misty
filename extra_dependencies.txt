@@ -1,2 +1,6 @@
+pyttsx3
 python-poppler
 pytesseract
+nltk
+PyDictionary
+yelpapi

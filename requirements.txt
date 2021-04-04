@@ -1,7 +1,3 @@
-pyttsx3
+html2text
 Whoosh
-PyDictionary
-yelpapi
 tqdm
-bcolors
-nltk
