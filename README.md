@@ -2,12 +2,12 @@
 Mystified Communal Promulgations
 
 ## YouTube Demos
-- [misty](https://youtu.be/GPdXXqWufwQ)
-- [query](https://youtu.be/r_sMrRFOs9o)
-- [definitions.py](https://youtu.be/p3cHpwhZEfo)
-- [ud.py](https://youtu.be/Rjo20dU0LGA)
-- [ca.py](https://youtu.be/KEum-wb0A1M)
-- [sacrec.py](https://youtu.be/Y1Bex2CdNx0)
+- [misty](https://youtu.be/GPdXXqWufwQ) - text to speech helper Ms. Ty
+- [query](https://youtu.be/r_sMrRFOs9o) - whoosh full-text searching of Tesseract-OCR'd PDFs/TXTs/JPGs
+- [definitions.py](https://youtu.be/p3cHpwhZEfo) - Synonyms, Antonyms, Definitions, See: recursive
+- [ud.py](https://youtu.be/Rjo20dU0LGA) - UrbanDictionary
+- [ca.py](https://youtu.be/KEum-wb0A1M) - Califonria Code Reader
+- [sacrec.py](https://youtu.be/Y1Bex2CdNx0) - Sacramento County Clerk Recorder Index Synchronizer
 
 ## California Codes
 
