@@ -1,5 +1,5 @@
 # misty
-Mystique Community Association python musings
+Mystified Communal Promulgations
 
 ## YouTube Demos
 - [misty](https://youtu.be/GPdXXqWufwQ)
@@ -15,7 +15,7 @@ Mystique Community Association python musings
 
 The plain-text capabilities come from Aaron Swartz's [html2text](https://pypi.org/project/html2text/) library.
 
-Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf).
+Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf), and my opinions about edicts of government on leginfo [feedback page](leginfo.legislature.ca.gov/faces/feedbackDetail.xhtml?primaryFeedbackId=prim1614216471200).
 
 ```shell
 wget -r -c -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
