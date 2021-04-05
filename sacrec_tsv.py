@@ -26,7 +26,7 @@ if __name__ == '__main__':
         rows = [o for jsonl in jsons for o in jsonl]
         # Make uniq by PrimaryDocNumber and SecondaryDocNumber.
         # TODO: consider frozenset(o.items()) as __hash__
-        ud = dict([((int(o['PrimaryDocNumber']), int(o['SecondaryDocNumber'])), o) for o in rows])
+        ud = dict([(int(o['ID']), o) for o in rows])
         desc_rows = [ud[key] for key in sorted(ud.keys(), reverse=True)]
 
         if not rows:
@@ -41,7 +41,7 @@ if __name__ == '__main__':
         sorted(rows, key=itemgetter('PrimaryDocNumber'))
 
         with open(csv_path, 'w') as fh:
-            ignore = ['FilingCode', 'BookNumber', 'NumberOfPages']
+            ignore = ['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType']
             dw = csv.DictWriter(fh, [k for k in keys if k not in ignore], delimiter='\t')
             dw.writeheader()
             dw.writerows([dict(((k, v) for k, v in r.items() if k not in ignore)) for r in desc_rows])
