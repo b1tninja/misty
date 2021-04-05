@@ -6,21 +6,28 @@ from operator import itemgetter
 
 from tqdm import tqdm
 
+
 # TODO: don't initialize params with mutables, use None
 def lod2csv(path, rows,
-            pk='ID',
-            i=['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType'],
-            sk='PrimaryDocNumber'):
+            group_by='ID',
+            ignore=None,
+            sort_by=None,
+            reprs=None):
     """list of dictionaries to CSV"""
-    ud = dict([(int(o[pk]), o) for o in rows])
-    sr = sorted(ud.values(), key=itemgetter(sk))
+    if ignore is None:
+        ignore = list()
 
+    if reprs is None:
+        reprs = dict()
+
+    keys = rows[0].keys()  # TODO: set([r.keys() for r in l]), bonus points for next()/iter
+
+    ud = dict([(int(o[group_by]), o) for o in rows]) if group_by else enumerate(rows)
     with open(path, 'w') as fh:
-        reprs = {'Names': lambda v: '|'.join(v.split("<br/>"))}
-
-        dw = csv.DictWriter(fh, [k for k in keys if k not in i], delimiter='\t')
+        dw = csv.DictWriter(fh, [k for k in keys if k not in ignore], delimiter='\t')
         dw.writeheader()
-        dw.writerows([dict(((k, reprs.get(k, lambda v: v)(v)) for k, v in r.items() if k not in i)) for r in sr])
+        dw.writerows([dict(((k, reprs.get(k, lambda v: v)(v)) for k, v in r.items() if k not in ignore)) for r in
+                      (sorted(ud.values(), key=itemgetter(sort_by)) if sort_by else rows)])
 
 
 if __name__ == '__main__':
@@ -48,9 +55,11 @@ if __name__ == '__main__':
             logging.warning("No rows!")
             continue
 
-        keys = rows[0].keys()  # TODO: set([r.keys() for r in l]), bonus points for next()/iter
-
         csv_name = name + '.csv'
         csv_path = os.path.join(root_dir, csv_name)
 
-        lod2csv(csv_path, rows)
+        lod2csv(csv_path, rows,
+                group_by='ID',
+                sort_by='PrimaryDocNumber',
+                ignore=['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType'],
+                reprs={'Names': lambda v: '|'.join(v.split("<br/>"))})
