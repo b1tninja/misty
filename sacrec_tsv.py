@@ -6,8 +6,21 @@ from operator import itemgetter
 
 from tqdm import tqdm
 
-def d2c(path, d):
-    pass
+# TODO: don't initialize params with mutables, use None
+def lod2csv(path, rows,
+            pk='ID',
+            i=['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType'],
+            sk='PrimaryDocNumber'):
+    """list of dictionaries to CSV"""
+    ud = dict([(int(o[pk]), o) for o in rows])
+    sr = sorted(ud.values(), key=itemgetter(sk))
+
+    with open(path, 'w') as fh:
+        reprs = {'Names': lambda v: '|'.join(v.split("<br/>"))}
+
+        dw = csv.DictWriter(fh, [k for k in keys if k not in i], delimiter='\t')
+        dw.writeheader()
+        dw.writerows([dict(((k, reprs.get(k, lambda v: v)(v)) for k, v in r.items() if k not in i)) for r in sr])
 
 
 if __name__ == '__main__':
@@ -30,8 +43,6 @@ if __name__ == '__main__':
         rows = [o for jsonl in jsons for o in jsonl]
         # Make uniq by PrimaryDocNumber and SecondaryDocNumber.
         # TODO: consider frozenset(o.items()) as __hash__
-        ud = dict([(int(o['ID']), o) for o in rows])
-        dr = sorted(ud.values(), key=itemgetter('PrimaryDocNumber'))
 
         if not rows:
             logging.warning("No rows!")
@@ -42,11 +53,4 @@ if __name__ == '__main__':
         csv_name = name + '.csv'
         csv_path = os.path.join(root_dir, csv_name)
 
-
-        with open(csv_path, 'w') as fh:
-            i = ['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType']
-            reprs = {'Names': lambda v: '|'.join(v.split("<br/>"))}
-
-            dw = csv.DictWriter(fh, [k for k in keys if k not in i], delimiter='\t')
-            dw.writeheader()
-            dw.writerows([dict(((k, reprs.get(k, lambda v: v)(v)) for k, v in r.items() if k not in i)) for r in dr])
+        lod2csv(csv_path, rows)
