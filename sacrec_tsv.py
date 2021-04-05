@@ -29,19 +29,19 @@ if __name__ == '__main__':
         ud = dict([((int(o['PrimaryDocNumber']), int(o['SecondaryDocNumber'])), o) for o in rows])
         desc_rows = [ud[key] for key in sorted(ud.keys(), reverse=True)]
 
-
         if not rows:
             logging.warning("No rows!")
             continue
 
         keys = rows[0].keys()  # TODO: set([r.keys() for r in l]), bonus points for next()/iter
 
-        csv_name = name + '.tsv'
+        csv_name = name + '.csv'
         csv_path = os.path.join(root_dir, csv_name)
 
         sorted(rows, key=itemgetter('PrimaryDocNumber'))
 
         with open(csv_path, 'w') as fh:
-            dw = csv.DictWriter(fh, keys, delimiter='\t')
+            ignore = ['FilingCode', 'BookNumber', 'NumberOfPages']
+            dw = csv.DictWriter(fh, [k for k in keys if k not in ignore], delimiter='\t')
             dw.writeheader()
-            dw.writerows(desc_rows)
+            dw.writerows([dict(((k, v) for k, v in r.items() if k not in ignore)) for r in desc_rows])
