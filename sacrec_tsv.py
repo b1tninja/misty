@@ -42,6 +42,8 @@ if __name__ == '__main__':
 
         with open(csv_path, 'w') as fh:
             ignore = ['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType']
+            reprs = {'Names': lambda v: '|'.join(v.split("<br/>"))}
+
             dw = csv.DictWriter(fh, [k for k in keys if k not in ignore], delimiter='\t')
             dw.writeheader()
-            dw.writerows([dict(((k, v) for k, v in r.items() if k not in ignore)) for r in desc_rows])
+            dw.writerows([dict(((k, reprs.get(k, lambda v: v)(v)) for k, v in r.items() if k not in ignore)) for r in desc_rows])
