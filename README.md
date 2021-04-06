@@ -17,12 +17,19 @@ The plain-text capabilities come from [Aaron Swartz](https://en.wikipedia.org/wi
 
 Read more about the legislatures "pubinfo" format [here](https://downloads.leginfo.legislature.ca.gov/pubinfo_Readme.pdf), and my opinions about edicts of government on leginfo [feedback page](https://leginfo.legislature.ca.gov/faces/feedbackDetail.xhtml?primaryFeedbackId=prim1614216471200).
 
+## Sacramento County
+
+`sacrec.py` is a Sacramento County Clerk Recorder Public Index dumper. It crawls the county's [website](https://ccr.saccounty.net/Pages/default.aspx) by filing code and saves the responses.
+
+`sacrec_tsv.py` takes those `.json` files eliminates any duplicates, sorts by `PrimaryDocNumber` and then saves to a .`.csv`. The `lod2csv` function is pretty handy way to convert a list of dictionaries into a csv.
+
+## Examples
 ```shell
 wget -r -c -np -l 1 -A zip downloads.leginfo.legislature.ca.gov
 python3 ca.py
 ```
 
-# Setup
+## Setup
 Check out from Github
 ```shell
 git clone https://github.com/b1tninja/misty --single-branch --depth 1
