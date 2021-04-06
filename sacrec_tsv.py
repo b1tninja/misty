@@ -7,9 +7,8 @@ from operator import itemgetter
 from tqdm import tqdm
 
 
-# TODO: don't initialize params with mutables, use None
 def lod2csv(path, rows,
-            group_by='ID',
+            group_by=None,
             ignore=None,
             sort_by=None,
             reprs=None):
@@ -22,8 +21,10 @@ def lod2csv(path, rows,
 
     keys = rows[0].keys()  # TODO: set([r.keys() for r in l]), bonus points for next()/iter
 
+    # TODO: consider frozenset(o.items()) as __hash__
+
     ud = dict([(int(o[group_by]), o) for o in rows]) if group_by else enumerate(rows)
-    with open(path, 'w') as fh:
+    with open(path, 'w', newline='') as fh:
         dw = csv.DictWriter(fh, [k for k in keys if k not in ignore], delimiter='\t')
         dw.writeheader()
         dw.writerows([dict(((k, reprs.get(k, lambda v: v)(v)) for k, v in r.items() if k not in ignore)) for r in
@@ -31,7 +32,10 @@ def lod2csv(path, rows,
 
 
 if __name__ == '__main__':
-    root_dir = 'sac'
+    state = 'california'
+    county = 'sacramento'
+    root_dir = os.path.join('data', state, county)
+    os.makedirs(root_dir)
     for name in tqdm(os.listdir(root_dir)):
         path = os.path.join(root_dir, name)
 
@@ -48,8 +52,6 @@ if __name__ == '__main__':
             continue
 
         rows = [o for jsonl in jsons for o in jsonl]
-        # Make uniq by PrimaryDocNumber and SecondaryDocNumber.
-        # TODO: consider frozenset(o.items()) as __hash__
 
         if not rows:
             logging.warning("No rows!")
