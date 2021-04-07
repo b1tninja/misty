@@ -23,8 +23,11 @@ async def apn_json(session: aiohttp.ClientSession, apn: str):
     json_path = os.path.join(BASE_DIR, '%s.json' % apn)
     if os.path.exists(json_path):
         with open(json_path, 'r') as fh:
-            o = json.load(fh)
-            return apn, o
+            try:
+                o = json.load(fh)
+                return apn, o
+            except json.JSONDecodeError:
+                pass
 
     async with session.get(url) as response:
         assert response.status == 200
