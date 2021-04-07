@@ -72,17 +72,19 @@ async def download_apns(session: aiohttp.ClientSession,
             json.dump(data, fh)
 
 
-async def main(root_dir, connections, pre_host, validate_jsons=True):
+async def main(root_dir, connections, per_host, validate_jsons=True):
     data_dir = os.path.join(root_dir, 'sacass')
     os.makedirs(data_dir, exist_ok=True)
 
     address_csv = os.path.join(data_dir, 'Address.csv')
     downloads = {
-        "Address.csv": 'https://prod-hub-indexer.s3.amazonaws.com/files/54b1835ffb7b4e728a3506fe1a23618d/1/full/2226/54b1835ffb7b4e728a3506fe1a23618d_1_full_2226.csv'}
+        "Address.csv":
+            'https://prod-hub-indexer.s3.amazonaws.com/files/54b1835ffb7b4e728a3506fe1a23618d/1/full/2226/54b1835ffb7b4e728a3506fe1a23618d_1_full_2226.csv',
+    }
 
     # Download needed files
     async with aiohttp.ClientSession(connector=aiohttp.connector.TCPConnector(limit=connections,
-                                                                              limit_per_host=pre_host)) as session:
+                                                                              limit_per_host=per_host)) as session:
         for name, url in downloads.items():
             path = os.path.join(data_dir, name)
             if not os.path.exists(path):
@@ -95,10 +97,10 @@ async def main(root_dir, connections, pre_host, validate_jsons=True):
     # TODO: def verify_jsons():
     jsons = [p for p in os.listdir(json_dir) if p.endswith('.json')]
     logging.info("Found %d json files.", len(jsons))
-    jsons = [p for p in os.listdir(json_dir) if p.endswith('.json')]
+
     bad_jsons = []
     if validate_jsons:
-        logging.info("Validating json files...", json_dir)
+        logging.info("Validating json files...")
         # Cleanup any partially written or invalid JSONs
         for name in tqdm.tqdm(os.listdir(json_dir)):
             path = os.path.join(json_dir, name)
@@ -124,7 +126,7 @@ async def main(root_dir, connections, pre_host, validate_jsons=True):
 
     random.shuffle(apns)
 
-    async with aiohttp.ClientSession(connector=aiohttp.connector.TCPConnector(limit_per_host=pre_host)) as session:
+    async with aiohttp.ClientSession(connector=aiohttp.connector.TCPConnector(limit_per_host=per_host)) as session:
         logging.info("Downloading %d APNs", len(apns))
         for n in tqdm.tqdm(range(0, len(apns), connections)):
             await download_apns(session, apns[n:][:connections], json_dir)
@@ -162,6 +164,6 @@ if __name__ == '__main__':
         loop = asyncio.get_event_loop()
         loop.run_until_complete(main(args.path,
                                      connections=args.connections,
-                                     pre_host=args.limit_per_host,
+                                     per_host=args.limit_per_host,
                                      validate_jsons=args.verify,
                                      ))
