@@ -10,6 +10,9 @@ import aiohttp
 import tqdm
 from aiohttp import ContentTypeError
 
+# TODO: lulz
+# from misty.utils import print_and_say as print
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -39,7 +42,7 @@ async def apn_json(session: aiohttp.ClientSession, apn: str):
         try:
             o = dict(await response.json())
         except ContentTypeError:
-            logging.warning("ContentTypeError for %s" % url)
+            logging.warning("\nContentTypeError for %s" % url)
         else:
             return apn, o
 
@@ -68,7 +71,7 @@ async def download_apns(session: aiohttp.ClientSession,
         try:
             assert data['APN'] == apn
         except AssertionError:
-            logging.warning("Server returned wrong JSON, asked for %s got %s", apn, data['APN'])
+            logging.warning("\nServer returned wrong JSON, asked for %s got %s", apn, data['APN'])
             continue
 
         logging.debug("APN: %s, FullAddress: %s", apn, data.get('FullAddress'))
@@ -78,11 +81,24 @@ async def download_apns(session: aiohttp.ClientSession,
             json.dump(data, fh)
 
 
+async def suggestions(session, query):
+    # TODO: lol urljoin and urlencode
+    url = 'https://assessorparcelviewer.saccounty.net/GISWebService/Autocomplete.svc/suggest?prefixText=%s&count=15&filter=Assessor' % query
+    async with session.get(url) as response:
+        assert response.status == 200
+        return await response.json()
+
+
+
 async def main(root_dir,
+               download=True,
                connections=100,
                per_host=10,
                validate_jsons=True,
                unlink=False):
+    """
+    Sacramento Assessor Parcel JSON downloader
+    """
     data_dir = os.path.join(root_dir, 'sacass')
     os.makedirs(data_dir, exist_ok=True)
 
@@ -143,9 +159,15 @@ async def main(root_dir,
     random.shuffle(apns)
 
     async with aiohttp.ClientSession(connector=aiohttp.connector.TCPConnector(limit_per_host=per_host)) as session:
-        logging.info("Downloading %d APNs", len(apns))
-        for n in tqdm.tqdm(range(0, len(apns), connections)):
-            await download_apns(session, apns[n:][:connections], json_dir)
+        if download:
+            logging.info("Downloading %d APNs", len(apns))
+            for n in tqdm.tqdm(range(0, len(apns), connections)):
+                await download_apns(session, apns[n:][:connections], json_dir)
+
+        # Find intersecting streets of WHIMSICAL
+        for suggestion in await suggestions(session, 'WHIMSICAL'):
+            print(suggestion)
+
 
 
 def dir_path(path):
@@ -167,9 +189,11 @@ if __name__ == '__main__':
     parser.add_argument('-l', '--limit-per-host', type=int, default=10, help="limit per host")
 
     try:
+        parser.add_argument('-d', '--download', action=argparse.BooleanOptionalAction, default=True)
         parser.add_argument('-v', '--verify', action=argparse.BooleanOptionalAction, default=False)
         parser.add_argument('-u', '--unlink', action=argparse.BooleanOptionalAction, default=False, help="Remove invalid JSONs")
     except:
+        parser.add_argument('-d', '--download', action="store_true")
         parser.add_argument('-v', '--verify', action="store_true")
         parser.add_argument('-u', '--unlink', action="store_true")
 
@@ -186,10 +210,9 @@ if __name__ == '__main__':
     else:
         loop = asyncio.get_event_loop()
         loop.run_until_complete(main(args.path,
+                                     download=args.download,
                                      connections=args.connections,
                                      per_host=args.limit_per_host,
                                      validate_jsons=args.verify,
                                      unlink=args.unlink,
                                      ))
-
-# TODO: https://assessorparcelviewer.saccounty.net/GISWebService/Autocomplete.svc/suggest?prefixText=WHIMSICAL&count=15&filter=Assessor
