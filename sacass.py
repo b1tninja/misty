@@ -6,7 +6,6 @@ import os
 import random
 import sys
 
-import aiofiles
 import aiohttp
 import tqdm
 from aiohttp import ContentTypeError
@@ -23,12 +22,13 @@ async def download(session: aiohttp.ClientSession, url, path):
     logger.info("Download %s to %s", url, path)
     async with session.get(url) as response:
         assert response.status == 200
-        f = await aiofiles.open(path, mode='wb')
         content = await response.read()
-        await f.write(content)
-        await f.close()
 
-        return content
+        if content:
+            with open(path, mode='wb') as fh:
+                fh.write(content)
+
+            return content
 
 
 async def apn_json(session: aiohttp.ClientSession, apn: str):
@@ -68,7 +68,7 @@ async def download_apns(session: aiohttp.ClientSession,
         logging.debug("APN: %s, FullAddress: %s", apn, data.get('FullAddress'))
 
         json_path = os.path.join(json_dir, apn + '.json')
-        async with aiofiles.open(json_path, 'w') as fh:
+        with open(json_path, 'w') as fh:
             json.dump(data, fh)
 
 
@@ -78,7 +78,7 @@ async def main(root_dir, connections, per_host, validate_jsons=True):
 
     address_csv = os.path.join(data_dir, 'Address.csv')
     downloads = {
-        "Address.csv":
+        address_csv:
             'https://prod-hub-indexer.s3.amazonaws.com/files/54b1835ffb7b4e728a3506fe1a23618d/1/full/2226/54b1835ffb7b4e728a3506fe1a23618d_1_full_2226.csv',
     }
 
@@ -105,8 +105,8 @@ async def main(root_dir, connections, per_host, validate_jsons=True):
         for name in tqdm.tqdm(os.listdir(json_dir)):
             path = os.path.join(json_dir, name)
             try:
-                async with aiofiles.open(path, mode="r") as fh:
-                    json.loads(await fh.read())
+                with open(path, mode="r") as fh:
+                    json.load(fh)
             except json.JSONDecodeError:
                 logger.debug("%s is invalid JSON", path)
                 bad_jsons.append(path)
