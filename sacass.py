@@ -65,7 +65,11 @@ async def download_apns(session: aiohttp.ClientSession,
 
         apn, data = ret
 
-        assert data['APN'] == apn
+        try:
+            assert data['APN'] == apn
+        except AssertionError:
+            logging.warning("Server returned wrong JSON, asked for %s got %s", apn, data['APN'])
+            continue
 
         logging.debug("APN: %s, FullAddress: %s", apn, data.get('FullAddress'))
 
@@ -74,7 +78,11 @@ async def download_apns(session: aiohttp.ClientSession,
             json.dump(data, fh)
 
 
-async def main(root_dir, connections, per_host, validate_jsons=True):
+async def main(root_dir,
+               connections=100,
+               per_host=10,
+               validate_jsons=True,
+               unlink=False):
     data_dir = os.path.join(root_dir, 'sacass')
     os.makedirs(data_dir, exist_ok=True)
 
@@ -106,18 +114,24 @@ async def main(root_dir, connections, per_host, validate_jsons=True):
         # Cleanup any partially written or invalid JSONs
         for name in tqdm.tqdm(os.listdir(json_dir)):
             path = os.path.join(json_dir, name)
+            if not path.endswith('.json'):
+                continue
+
             try:
                 with open(path, mode="r") as fh:
                     data = json.load(fh)
-            except json.JSONDecodeError:
-                logger.debug("%s is invalid JSON", path)
+                    assert data['APN'] == name[:-5]
+            except (json.JSONDecodeError, AssertionError) as e:
+                logger.debug("%s: %s", path, e)
                 bad_jsons.append(path)
+
 
         logger.info("Checked %d jsons, removing %d invalid jsons.", len(jsons), len(bad_jsons))
 
-    for bad_json in bad_jsons:
-        assert bad_json.endswith('.json')
-        os.unlink(bad_json)
+    if unlink:
+        for bad_json in bad_jsons:
+            assert bad_json.endswith('.json')
+            os.unlink(bad_json)
 
     existing_jsons = set(jsons) - set(bad_jsons)
 
@@ -154,11 +168,18 @@ if __name__ == '__main__':
 
     try:
         parser.add_argument('-v', '--verify', action=argparse.BooleanOptionalAction, default=False)
+        parser.add_argument('-u', '--unlink', action=argparse.BooleanOptionalAction, default=False, help="Remove invalid JSONs")
     except:
         parser.add_argument('-v', '--verify', action="store_true")
+        parser.add_argument('-u', '--unlink', action="store_true")
 
     try:
         args = parser.parse_args()
+
+        if args.unlink:
+            # implicit verify
+            args.verify = True
+
     except NotADirectoryError:
         logger.critical("Please specify a path to a directory to download data into.")
         parser.print_help(sys.stderr)
@@ -168,6 +189,7 @@ if __name__ == '__main__':
                                      connections=args.connections,
                                      per_host=args.limit_per_host,
                                      validate_jsons=args.verify,
+                                     unlink=args.unlink,
                                      ))
 
 # TODO: https://assessorparcelviewer.saccounty.net/GISWebService/Autocomplete.svc/suggest?prefixText=WHIMSICAL&count=15&filter=Assessor
