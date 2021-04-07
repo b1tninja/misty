@@ -8,6 +8,7 @@ Mystical Communal Promulgations... mulgare! Capitulate! Lactate! Promulgate!
 - [ud.py](https://youtu.be/Rjo20dU0LGA) - UrbanDictionary
 - [ca.py](https://youtu.be/KEum-wb0A1M) - California Code Reader (pubinfo_*.zip dat/lob parser)
 - [sacrec.py](https://youtu.be/Y1Bex2CdNx0) - Sacramento County Clerk Recorder Index Synchronizer
+- [sacass.py](https://youtu.be/0SISoF4ENUE) - Sacramento Assessors Parcel data downloader
 
 ## California Codes
 
@@ -22,6 +23,8 @@ Read more about the legislatures "pubinfo" format [here](https://downloads.legin
 `sacrec.py` is a Sacramento County Clerk Recorder Public Index dumper. It crawls the county's [website](https://ccr.saccounty.net/Pages/default.aspx) by filing code and saves the responses.
 
 `sacrec_tsv.py` takes those `.json` files eliminates any duplicates, sorts by `PrimaryDocNumber` and then saves to a .`.csv`. The `lod2csv` function is pretty handy way to convert a list of dictionaries into a csv.
+
+`sacass.py` downlaods the jsons from the Sacramento Coutny Assessors Parcel Viewer. The APNs are obtaind from [Address.csv](https://data.saccounty.net/datasets/54b1835ffb7b4e728a3506fe1a23618d_0).
 
 ## Examples
 ```shell
