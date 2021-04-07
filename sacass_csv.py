@@ -4,7 +4,19 @@ import logging
 import os
 from operator import itemgetter
 
+import requests
 from tqdm import tqdm
+
+
+from misty.utils import print_and_say as print
+
+def get_suggestions(query):
+    # TODO: lol urlunparse and urlencode
+    url = 'https://assessorparcelviewer.saccounty.net/GISWebService/Autocomplete.svc/suggest?prefixText=%s&count=15&filter=Assessor' % query
+    # TODO: i got 99 problems and a cert aint none
+    response = requests.get(url, verify=False)
+    assert response.status_code == 200
+    return response.json()
 
 
 def lod2csv(path, rows,
@@ -64,15 +76,36 @@ if __name__ == '__main__':
     # v.split('-')
     # int(v[6:][:-2])
 
-    filters = [
-        # 'WHIMSICAL LN'
-    ]
+    filters = {
+        'MESMERIZING WALK',
+        # 'PICASSO CIR',
+        # 'KANDINSKY WAY',
+        # 'UNNAMED RD',
+        'ENCHANTED WALK',
+        # 'MACON DR',
+        'WHIMSICAL LN',
+        'MAGICAL WALK',
+    }
+    if not filters:
+        # Use County Assessors suggestions API to Find intersecting street names.
+        query = "WHIMSICAL"
+        suggestions = [suggestion.split(' at ') for suggestion in get_suggestions(query)]
+        streets = {a for b in suggestions for a in b}
+        for street in streets:
+            print(street)
+
+        filters = streets
+
     filter_by = 'FullAddress'
 
-    rows = [o for o in jsons if not filters or any(v in o[filter_by] for v in filters)]
+    rows = sorted([o for o in jsons if not filters or any(v in o[filter_by] for v in filters)],
+                  key=itemgetter('DocumentDate'), reverse=True)
 
     if not rows:
         logging.warning("No rows!")
+
+    for value in set(map(itemgetter('FullAddress'), rows)):
+        print(value)
 
     csv_name = 'rows.csv'
     csv_path = os.path.join(root_dir, csv_name)
@@ -109,12 +142,12 @@ if __name__ == '__main__':
                 'LastRollYear',
                 'LongLegalDescription',
                 'Lot',
-                'LotSize',
+                # 'LotSize',
                 'MailAddress1',
                 'MailAddress2',
-                # 'NeighborhoodCode',
-                # 'Owner',
-                # 'OwnerStatus',
+                'NeighborhoodCode',
+                'Owner',
+                'OwnerStatus',
                 'PCNCreatedBy',
                 'PCNCreatedDate',
                 'PCNDeletedBy',
