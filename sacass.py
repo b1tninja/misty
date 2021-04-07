@@ -65,6 +65,8 @@ async def download_apns(session: aiohttp.ClientSession,
 
         apn, data = ret
 
+        assert data['APN'] == apn
+
         logging.debug("APN: %s, FullAddress: %s", apn, data.get('FullAddress'))
 
         json_path = os.path.join(json_dir, apn + '.json')
@@ -106,7 +108,7 @@ async def main(root_dir, connections, per_host, validate_jsons=True):
             path = os.path.join(json_dir, name)
             try:
                 with open(path, mode="r") as fh:
-                    json.load(fh)
+                    data = json.load(fh)
             except json.JSONDecodeError:
                 logger.debug("%s is invalid JSON", path)
                 bad_jsons.append(path)
@@ -167,3 +169,5 @@ if __name__ == '__main__':
                                      per_host=args.limit_per_host,
                                      validate_jsons=args.verify,
                                      ))
+
+# TODO: https://assessorparcelviewer.saccounty.net/GISWebService/Autocomplete.svc/suggest?prefixText=WHIMSICAL&count=15&filter=Assessor
