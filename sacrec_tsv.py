@@ -35,7 +35,7 @@ if __name__ == '__main__':
     state = 'california'
     county = 'sacramento'
     root_dir = os.path.join('data', state, county)
-    os.makedirs(root_dir)
+    os.makedirs(root_dir, exist_ok=True)
     for name in tqdm(os.listdir(root_dir)):
         path = os.path.join(root_dir, name)
 
@@ -63,5 +63,10 @@ if __name__ == '__main__':
         lod2csv(csv_path, rows,
                 group_by='ID',
                 sort_by='PrimaryDocNumber',
-                ignore=['ID', 'SecondaryDocNumber', 'FilingCode', 'BookNumber', 'NumberOfPages', 'BookType'],
+                ignore=['ID',
+                        'SecondaryDocNumber',
+                        'FilingCode',
+                        'BookNumber',
+                        'NumberOfPages',
+                        'BookType'],
                 reprs={'Names': lambda v: '|'.join(v.split("<br/>"))})
