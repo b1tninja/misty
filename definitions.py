@@ -59,7 +59,7 @@ def read_definitions(word):
 
 
 if __name__ == '__main__':
-    pending = deque(['keeper'])
+    pending = deque(['arbitrary'])
 
     while pending:
         try:
