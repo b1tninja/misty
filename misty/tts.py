@@ -1,3 +1,13 @@
+import os
+import re
+import logging
+
+from . import tts, voices
+from .regexp import freenode_OnlineCop_re
+from .utils import print_and_say, mkdir, slugify
+
+from .config import TTS_BASEDIR
+
 def genwavs():
     ###################### voices #######################
     for voice in voices.values():
