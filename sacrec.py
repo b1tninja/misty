@@ -130,7 +130,7 @@ def clerk_search(**kwargs):
         # ('RefinementTokens', ''),
         # ('RollNumber', ''),
         # ('RollType', ''),
-        # ('Rows', '10'),
+        ('Rows', '100'),
         # ('SearchText', ''),
         # ('SecDocNumberFrom', ''),
         # ('SecDocNumberTo', ''),
@@ -207,10 +207,9 @@ if __name__ == '__main__':
                 break
 
             n += len(j['SearchResults'])
-            logger.info("%d/%d", n, j['ResultCount'])
+            logger.info("%.1f%% - %d/%d", n/j['ResultCount'], n, j['ResultCount'])
 
-            jsonp_path = os.path.join(basedir, "%d.json" % n)
-
+            # save json
             with open(jsonp_path, 'w') as fh:
                 json.dump(j, fh)
 
