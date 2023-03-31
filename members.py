@@ -2,7 +2,7 @@ import csv
 
 import requests
 
-from sacrec import clerk_search
+from sacrec import clerk_search, clerk_get_names_for_document_id
 
 apns = [20111700220010, 20111700220011, 20111700220012, 20111700220013, 20111700220014, 20111700220015, 20111700220016,
         20111700230023, 20111700230022, 20111700230021, 20111700230020, 20111700230019, 20111700230018, 20111700230017,
@@ -25,14 +25,19 @@ with open('members.csv', 'w', newline='') as fh:
             "https://assessorparcelviewer.saccounty.gov/GISWebService/GISWebservice.svc/parcels/public/%d" % apn)
         assert req.status_code == 200
         parcel = req.json()
-        docs = clerk_search(SearchText=parcel['DocumentBook'] + parcel['DocumentPage'].zfill(4),
+        document_number = parcel['DocumentBook'] + parcel['DocumentPage'].zfill(4)
+        docs = clerk_search(SearchText=document_number,
                             IsBasicSearch='true',
                             IsExactMatch='true')
         assert len(docs['SearchResults']) == 1
         doc = docs['SearchResults'][0]
-        names = doc['Names'].split('<br/>')
-        grantees = [name[4:] for name in names if name.startswith('(E) ')]
-        grantors = [name[4:] for name in names if name.startswith('(R) ')]
+        assert doc['PrimaryDocNumber'] == document_number
+        # names = doc['Names'].split('<br/>')
+        # grantees = [name[4:] for name in names if name.startswith('(E) ')]
+        # grantors = [name[4:] for name in names if name.startswith('(R) ')]
+        names = clerk_get_names_for_document_id(doc['ID'])
+        grantors = [entity['Fullname'] for entity in names if entity['NameTypeDesc'] == 'Grantor']
+        grantees = [entity['Fullname'] for entity in names if entity['NameTypeDesc'] == 'Grantee']
 
         parcel_keys = [
             'APN',
@@ -46,7 +51,7 @@ with open('members.csv', 'w', newline='') as fh:
             'TotalLivingArea',
             'Unit'
         ]
-        row = ("\n".join(grantees), *tuple([parcel.get(k) for k in parcel_keys]))
+        row = (document_number, *tuple([parcel.get(k) for k in parcel_keys]), "\n".join(grantors), "\n".join(grantees))
 
         print(row)
         writer.writerow(row)
