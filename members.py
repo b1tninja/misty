@@ -22,7 +22,7 @@ with open('members.csv', 'w', newline='') as fh:
 
     for apn in apns:
         req = requests.get(
-            "https://assessorparcelviewer.saccounty.gov/GISWebService/GISWebservice.svc/parcels/public/%d" % apn)
+            "https://assessorparcelviewer.saccounty.gov/GISWebService/api/gisapps/parcels/public/%d" % apn)
         assert req.status_code == 200
         parcel = req.json()
         document_number = parcel['DocumentBook'] + parcel['DocumentPage'].zfill(4)
@@ -51,9 +51,7 @@ with open('members.csv', 'w', newline='') as fh:
             'TotalLivingArea',
             'Unit'
         ]
-        row = (document_number, *tuple([parcel.get(k) for k in parcel_keys]), "\n".join(grantors), "\n".join(grantees))
+        row = (*tuple([parcel.get(k) for k in parcel_keys]), "\n".join(grantors), "\n".join(grantees), document_number)
 
         print(row)
         writer.writerow(row)
-
-
